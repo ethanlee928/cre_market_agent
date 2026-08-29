@@ -1,0 +1,15 @@
+# Committed so a reviewer never hits the first-run email prompt (DX finding F2).
+[browser]
+gatherUsageStats = false
+
+[server]
+address = "localhost"
+headless = true
+
+[client]
+# Never surface a Python traceback to a business user.
+showErrorDetails = "none"
+
+[theme]
+base = "light"
+primaryColor = "#1f4e79"

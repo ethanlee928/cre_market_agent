@@ -1,0 +1,57 @@
+# Controlled vocabulary for London office submarkets.
+# Fixes review finding H4: the seed uses several strings for overlapping places
+# ("West End" vs "West End Core (Mayfair/St James's)"). Without a hierarchy an
+# asset in Mayfair never matches a signal about the West End, and the relevance
+# lens silently returns nothing.
+
+submarkets:
+  central_london:
+    label: Central London
+
+  city:
+    label: City
+    parent: central_london
+    aliases: ["The City", "City of London", "EC"]
+  city_core:
+    label: City Core
+    parent: city
+  city_fringe:
+    label: City Fringe
+    parent: city
+    aliases: ["City Northern Fringe", "Northern Fringe", "EC1", "Clerkenwell", "Shoreditch"]
+
+  west_end:
+    label: West End
+    parent: central_london
+    aliases: ["WE", "W1"]
+  west_end_core:
+    label: West End Core (Mayfair/St James's)
+    parent: west_end
+    aliases: ["Mayfair", "St James's", "St James", "West End Core"]
+  north_of_oxford_street_east:
+    label: North of Oxford Street East
+    parent: west_end
+    aliases: ["NOX East", "Fitzrovia", "Euston", "NW1"]
+  hammersmith:
+    label: Hammersmith
+    parent: west_end
+  vneb:
+    label: VNEB
+    parent: west_end
+    aliases: ["Vauxhall Nine Elms Battersea", "Nine Elms", "Battersea"]
+
+  southbank:
+    label: Southbank
+    parent: central_london
+    aliases: ["South Bank", "SE1"]
+  docklands:
+    label: Docklands
+    parent: central_london
+    aliases: ["Canary Wharf", "E14"]
+  midtown:
+    label: Midtown
+    parent: central_london
+    aliases: ["Holborn", "Covent Garden", "WC1", "WC2"]
+  paddington:
+    label: Paddington
+    parent: west_end

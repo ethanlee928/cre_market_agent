@@ -1,0 +1,32 @@
+# ILLUSTRATIVE PORTFOLIO — these three assets are fictional.
+#
+# They exist so the relevance lens has something to match against in a demo.
+# Every market figure in this application is real and sourced from Savills;
+# the holdings below are not. The app labels them as illustrative on screen.
+#
+# Replace with your own assets, or delete every entry: the market-wide view
+# works completely with an empty watchlist.
+
+label: "Illustrative portfolio (fictional holdings, real market data)"
+
+assets:
+  - name: "120 Fenchurch Street"
+    submarket: "City Core"
+    grade: "A"
+    sqft: 145000
+    lease_expiry: "2031-06"
+    note: "Core City tower, recently refurbished"
+
+  - name: "Mayfair House"
+    submarket: "Mayfair"
+    grade: "B"
+    sqft: 24000
+    lease_expiry: "2027-09"
+    note: "Secondary West End stock, refurbishment decision due"
+
+  - name: "Clerkenwell Works"
+    submarket: "City Fringe"
+    grade: "B"
+    sqft: 38000
+    lease_expiry: "2028-03"
+    note: "Fringe location, exposed to elevated fringe vacancy"
