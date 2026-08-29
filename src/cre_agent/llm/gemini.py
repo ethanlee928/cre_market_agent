@@ -27,6 +27,12 @@ from ..watchlist import Watchlist
 
 MAX_TURNS = 20
 
+# What get_metric renders for a fact carrying no sector, plus the spellings a
+# model reaches for when it means the same thing. None of these is a sector
+# name, so each maps back to "the undifferentiated total" rather than being
+# looked up and missed.
+_ALL_SECTORS = {"all sectors", "all", "total", "all-sector", "any"}
+
 
 @dataclass
 class Event:
@@ -196,8 +202,23 @@ class Agent:
         try:
             if name == "get_metric":
                 asked = args["submarket"]
+                # The sector gets the same treatment as the submarket below: a
+                # name this source does not carry is a different answer from a
+                # figure it does not publish. "all sectors" is this tool's own
+                # label for the undifferentiated total (see the response), so
+                # it comes back as often as the model is handed it -- and read
+                # literally it matched no fact and reported the total missing.
+                sector = args.get("sector")
+                if sector and sector.strip().lower() in _ALL_SECTORS:
+                    sector = None
+                elif sector and sector not in self.store.sectors():
+                    return {"found": False,
+                            "message": f"{sector!r} is not a sector in this "
+                                       f"source. It carries "
+                                       f"{self.store.sectors()}, or omit "
+                                       f"sector for the all-sector total."}
                 f = self.store.get(args["metric"], asked, args.get("period"),
-                                   sector=args.get("sector"), climb=True)
+                                   sector=sector, climb=True)
                 if not f:
                     # A typo and a real data gap need different answers. Only
                     # the second one is a correct "I don't have that".
@@ -241,7 +262,26 @@ class Agent:
                         "as_of": self.store.as_of()}
 
             if name == "find_market_activity":
+                # These arguments are model-authored and go straight into a
+                # kwargs splat, so they are checked first. An undeclared key
+                # raised TypeError and a min_sqft of "50000" raised on the
+                # first comparison -- both reached the model as a Python error
+                # it could not act on, and both burned a turn. Say what is
+                # wrong instead, in the tool's own vocabulary.
+                allowed = ("type", "sector", "submarket", "min_sqft")
+                if unknown := sorted(set(args) - set(allowed)):
+                    return {"error": "unknown_argument",
+                            "message": f"find_market_activity has no {unknown} "
+                                       f"filter; it takes {list(allowed)}. "
+                                       f"Re-call without it."}
                 clean = {k: v for k, v in args.items() if v not in (None, "")}
+                if "min_sqft" in clean:
+                    try:
+                        clean["min_sqft"] = int(float(clean["min_sqft"]))
+                    except (TypeError, ValueError):
+                        return {"error": "bad_argument",
+                                "message": f"min_sqft must be a number, got "
+                                           f"{clean['min_sqft']!r}."}
                 hits = self.store.find_events(**clean)
                 out = {"count": len(hits),
                        "events": [{k: v for k, v in e.items() if k != "_source"}

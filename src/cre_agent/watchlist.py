@@ -20,11 +20,10 @@ from pathlib import Path
 
 import yaml
 
-from .submarkets import CONFIG_DIR, Submarket, SubmarketIndex  # noqa: F401
-
-# Submarket/SubmarketIndex moved to submarkets.py -- the store and the event
-# lookup need them too. Re-exported here so existing imports keep working.
-
+# SubmarketIndex lives in submarkets.py -- the store and the event lookup
+# need it too. Imported here for this module's own use, and re-exported so
+# existing `from .watchlist import SubmarketIndex` imports keep working.
+from .submarkets import CONFIG_DIR, SubmarketIndex
 
 
 def parse_ym(value: str) -> tuple[int, int]:

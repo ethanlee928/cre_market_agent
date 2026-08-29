@@ -140,7 +140,10 @@ def assess(store: Store, watchlist: Watchlist | None = None) -> list[AreaStatus]
 
 def render(store: Store, watchlist: Watchlist | None = None) -> str:
     rows = assess(store, watchlist)
-    w = (2, 32, 18, 26, 11)
+    # Width from the content, not a guess: area 9's name is 38 characters
+    # and a fixed 32 truncated it mid-word in a table whose whole job is
+    # saying plainly what is and is not covered.
+    w = (2, max(len(r.area.name) for r in rows), 18, 26, 11)
     head = ("#", "KEY AREA", "DATA", "SURFACED BY", "STATUS")
     rule = "+" + "+".join("-" * (n + 2) for n in w) + "+"
     lines = [rule,

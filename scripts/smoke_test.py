@@ -10,7 +10,7 @@ Four checks, each independent so a failure in one still reports the others:
 Check 4 is the one that matters. The design has news_scan (grounding) and the
 streamed tool loop (function calling) running in the same agent turn. On some
 providers those two are mutually exclusive. If 4 fails, the architecture needs
-a two-call split and it is much cheaper to learn that now than on Sunday.
+a two-call split, which is much cheaper to learn now than after it is built.
 
     uv run python scripts/smoke_test.py
 """
@@ -58,15 +58,6 @@ get_market_metric = types.FunctionDeclaration(
         required=["metric", "submarket"],
     ),
 )
-
-FAKE_STORE = {
-    ("vacancy_rate", "City"): {
-        "value": 7.0,
-        "unit": "pct",
-        "source": "Savills Central London Office Market Watch Q2 2026",
-        "as_of": "2026-08-06",
-    }
-}
 
 results: dict[str, tuple[bool, str]] = {}
 
@@ -193,5 +184,5 @@ else:
     print("GATE FAILED. Grounding and function declarations cannot share a request.")
     print("Architecture change: split into two calls. news_scan runs as its own")
     print("grounded call, its result is injected as context, and the tool loop")
-    print("runs separately. Roughly +1h, and far cheaper to know now.")
+    print("runs separately.")
 print("=" * 70)
