@@ -1,0 +1,67 @@
+# The offline suite, on every push and PR.
+#
+# `tests/` is deliberately runner-free, key-free and network-free: six plain
+# scripts, each exiting non-zero on the first failure. So CI is the same loop
+# a developer runs locally, not a second way of invoking the tests that can
+# drift from it. No GOOGLE_API_KEY is set here on purpose -- if a test ever
+# starts needing one, this job fails and that is the point. The live evals
+# (evals/run.py) need a key and a model, so they stay a manual step.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.9.7"          # the version the Dockerfile pins
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked        # the lockfile, or fail
+
+      - name: Run the offline suite
+        run: |
+          failed=0
+          for t in tests/test_*.py; do
+            echo "::group::$t"
+            uv run python "$t" || failed=1
+            echo "::endgroup::"
+          done
+          exit $failed
+
+      - name: Build the brief with no API key
+        # Everything app.py does at module scope, minus Streamlit: load the
+        # real seeds and the real watchlist, run every detector, and construct
+        # the Agent with no key. That last one is the documented degrade path
+        # (`Agent.enabled` False, never a raise), and the first two are where
+        # a bad seed row or a mistyped watchlist key would take down a
+        # reviewer's first `streamlit run` before any test got to speak.
+        env:
+          GOOGLE_API_KEY: ""
+        run: |
+          uv run python - <<'PY'
+          import sys; sys.path.insert(0, "src")
+          from cre_agent.store import Store
+          from cre_agent.watchlist import Watchlist
+          from cre_agent.signals import detect_all
+          from cre_agent.llm.gemini import Agent
+
+          store, watchlist = Store.load(), Watchlist.load()
+          signals = detect_all(store, watchlist)
+          agent = Agent(store, watchlist, api_key=None)
+          assert signals, "the brief must not be empty"
+          assert not agent.enabled, "no key must degrade, not enable"
+          print(f"{len(signals)} signals from {len(store.facts)} facts, "
+                f"{len(watchlist)} holdings, chat disabled as designed")
+          PY
