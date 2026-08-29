@@ -43,8 +43,9 @@ The app opens at **http://localhost:8501**. Press `Ctrl+C` in the terminal to st
 
 ## Running without an API key
 
-The app still works, in reduced form. The briefing, the four signals, the portfolio
-matching and all the figures are computed in plain Python from the local dataset, so
+The app still works, in reduced form. The briefing, the five signals, the portfolio
+matching — including the per-building reversion arithmetic and its decision verb —
+are computed in plain Python from the local dataset, so
 they render with no key and no network. Only the chat box is disabled, and the sidebar
 says so.
 
@@ -55,17 +56,51 @@ available, which is also why they are identical on every run.
 
 ## What you should see
 
-On load, a briefing with four ranked signals:
+On load, a briefing with five ranked signals:
 
-|                | Signal                                                                    |
-| -------------- | ------------------------------------------------------------------------- |
-| 🔴 RISK        | City Grade B rents falling while Grade A rises (−2.6% against +7.0%)      |
-| 🔴 RISK        | West End Grade B rents falling while Grade A rises (−11.3% against +4.0%) |
-| 🟠 WATCH       | Record 7,700,000 sq ft of completions in 2026, only 35% pre-let           |
-| 🟢 OPPORTUNITY | 41 large requirements chasing 21 available options (2.0:1)                |
+|                | Signal                                                                    | Your exposure |
+| -------------- | ------------------------------------------------------------------------- | ------------- |
+| 🔴 RISK        | City Grade B rents falling while Grade A rises (−2.6% against +7.0%)      | Clerkenwell Works |
+| 🔴 RISK        | West End Grade B rents falling while Grade A rises (−11.3% against +4.0%) | Mayfair House |
+| 🟠 WATCH       | Record 7,700,000 sq ft of completions in 2026, only 35% pre-let           | Mayfair House, Clerkenwell Works |
+| 🟢 OPPORTUNITY | 41 large requirements chasing 21 available options (2.0:1)                | 120 Fenchurch Street |
+| 🟢 OPPORTUNITY | Insurance & Financial take-up at a series low, yet 41% of space under offer against 20% of take-up | — |
 
 The sidebar shows an illustrative three-asset portfolio, each tagged with the worst
 signal touching it. Signals that hit your holdings sort to the top and expand by default.
+
+### The join, and the rung it is missing
+
+Each matched building gets its own sentence, computed in Python and closing on a
+decision verb — `regear`, `refurbish`, `re-price`, `hold`, `defer capex`,
+`start the conversation`. Never "monitor": that is the word that lets a paragraph end
+without deciding anything.
+
+> **Clerkenwell Works** — passing £52.00 psf against the City Grade B average of £45.66 psf
+> (2026H1), which is £240,920 a year above market across 38,000 sq ft, exposed at the next
+> review; reaching the City Grade A average of £76.21 psf would be worth £919,980 a year
+> gross, before capex and voids.
+> → **regear**
+
+> **Mayfair House** — no reversion figure is computable: Savills publishes the West End
+> Grade B change (−11.3%) but not the level, so there is nothing to measure the passing
+> rent against; reaching the West End Grade A average of £106.17 psf would be worth
+> £580,080 a year gross, before capex and voids; EPC D is below the standard several of
+> those proposals would require, which comes first.
+> → **defer capex**
+
+Two buildings, the same ladder, one missing rung — and the app says which rung and what
+it costs rather than substituting a number. The seed holds two West End lettings with
+achieved rents, £182.50 and £201.00 psf, both of which a naive submarket filter would
+hang off a Grade B secondary building. Without a published Grade B level there is no way
+to say whether either is a ceiling or a like-for-like, so neither is shown.
+
+The two figures per building are deliberately two and not three: passing-minus-Grade-B
+and Grade-A-minus-passing sum exactly to the grade gap, so printing all three invites a
+reader to add two of them and count the same spread twice.
+
+The holdings, their passing rents and their EPC ratings are **fictional** — that is Tier 3
+data, a client's own rent roll. The market figures they are measured against are not.
 
 Then ask it something:
 
@@ -178,14 +213,16 @@ Four checks: plain generation, function calling, Search grounding, and the two c
 in a single request. All four should pass.
 
 ```bash
-uv run python tests/test_time_axis.py
+for t in tests/test_*.py; do uv run python "$t"; done
 ```
 
-19 tests over the store and detectors. Needs no API key, no network and no test
-runner — it is a plain script, so there is nothing to install. Most of these
-guard failures that only appear once a second quarter is merged: periods sorting
-by their string name, a metric changing grain between reports, a detector
-subtracting two figures from different years.
+69 tests across four files. None needs an API key, a network or a test runner — they
+are plain scripts, so there is nothing to install. Most guard failures that only appear
+once a second quarter is merged: periods sorting by their string name, a metric changing
+grain between reports, a detector subtracting two figures from different years. The
+newest file guards the join — that a lease window opening in July 2026 rejects a March
+2026 break, and that a `Fact` carrying a `None` level never has a comparison built
+against it.
 
 ---
 
@@ -224,8 +261,9 @@ the market-wide view works completely with an empty watchlist.
 ├── app.py                      Streamlit chat surface; briefing is message one
 ├── src/cre_agent/
 │   ├── store.py                the spine. Only module that reads raw JSON
-│   ├── signals.py              3 deterministic detectors
-│   ├── watchlist.py            portfolio matching + submarket hierarchy
+│   ├── signals.py              4 deterministic detectors + the relevance join
+│   ├── watchlist.py            your assets, lease windows, per-signal matching
+│   ├── submarkets.py           the controlled vocabulary and its hierarchy
 │   └── llm/gemini.py           the agent loop, streams tool calls to the UI
 ├── config/
 │   ├── watchlist.yaml          your assets (three fictional ones ship by default)
@@ -236,7 +274,10 @@ the market-wide view works completely with an empty watchlist.
 │   ├── probe_models.py         which models does this key see?
 │   └── smoke_test.py           four API checks
 └── tests/
-    └── test_time_axis.py       19 tests, no pytest needed
+    ├── test_time_axis.py       19  store, periods, detectors
+    ├── test_submarket_resolution.py  18  aliases resolve up, events match down
+    ├── test_sector_demand.py   12  the trailing-vs-leading detector
+    └── test_watchlist_join.py  20  lease windows, reversion, the E-4 trap
 ```
 
 **The design rule:** `store.py` is the only module that touches raw data. Detectors and
