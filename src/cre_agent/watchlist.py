@@ -20,61 +20,29 @@ from pathlib import Path
 
 import yaml
 
-CONFIG_DIR = Path(__file__).resolve().parents[2] / "config"
+from .submarkets import CONFIG_DIR, Submarket, SubmarketIndex  # noqa: F401
+
+# Submarket/SubmarketIndex moved to submarkets.py -- the store and the event
+# lookup need them too. Re-exported here so existing imports keep working.
 
 
-@dataclass(frozen=True)
-class Submarket:
-    id: str
-    label: str
-    parent: str | None = None
-    aliases: tuple[str, ...] = ()
 
+def parse_ym(value: str) -> tuple[int, int]:
+    """'2027-09' -> (2027, 9). Fails loud, as the store does everywhere else.
 
-class SubmarketIndex:
-    """Canonical submarket names, their aliases, and their hierarchy."""
-
-    def __init__(self, entries: list[Submarket]):
-        self.by_id = {s.id: s for s in entries}
-        self._lookup: dict[str, str] = {}
-        for s in entries:
-            for name in (s.id, s.label, *s.aliases):
-                self._lookup[name.lower()] = s.id
-
-    @classmethod
-    def load(cls, path: Path | None = None) -> "SubmarketIndex":
-        path = path or CONFIG_DIR / "submarkets.yaml"
-        raw = yaml.safe_load(path.read_text()) or {}
-        return cls([
-            Submarket(
-                id=k,
-                label=v.get("label", k),
-                parent=v.get("parent"),
-                aliases=tuple(v.get("aliases", [])),
-            )
-            for k, v in raw.get("submarkets", {}).items()
-        ])
-
-    def resolve(self, name: str) -> str | None:
-        return self._lookup.get(name.strip().lower())
-
-    def ancestors(self, sid: str) -> list[str]:
-        """The submarket plus every parent above it."""
-        out, cur = [], sid
-        while cur:
-            out.append(cur)
-            cur = self.by_id[cur].parent if cur in self.by_id else None
-        return out
-
-    def covers(self, asset_submarket: str, signal_submarket: str) -> bool:
-        """Does a signal about `signal_submarket` reach an asset in it?
-
-        Mayfair is inside the West End, so a West End signal reaches it.
-        """
-        a, s = self.resolve(asset_submarket), self.resolve(signal_submarket)
-        if not a or not s:
-            return False
-        return s in self.ancestors(a)
+    Deliberately not routed through store.Period. Verified: Period.parse
+    ("2027-09") raises SeedSchemaError, and Period.parse("2026H2-2029")
+    discards the H2 -- .months returns (1, 12) -- so contains() answers True
+    for a window that does not open until July. Lease dates are compared as
+    (year, month) tuples instead.
+    """
+    try:
+        year, month = (int(part) for part in value.split("-"))
+    except (AttributeError, TypeError, ValueError):
+        raise ValueError(f"lease date {value!r} is not YYYY-MM") from None
+    if not 1 <= month <= 12:
+        raise ValueError(f"lease date {value!r} has month {month}")
+    return year, month
 
 
 @dataclass(frozen=True)
@@ -84,7 +52,19 @@ class Asset:
     grade: str | None = None
     sqft: int | None = None
     lease_expiry: str | None = None
+    break_date: str | None = None
+    passing_rent_psf: float | None = None
+    epc_rating: str | None = None
     note: str | None = None
+
+    def lease_event(self) -> str | None:
+        """The date that actually forces a decision.
+
+        A break is a decision point; an expiry is the backstop. Whichever comes
+        first is what a landlord plans around, so the break wins when present.
+        An asset with neither is not on any clock and matches no window.
+        """
+        return self.break_date or self.lease_expiry
 
     def describe(self) -> str:
         bits = [self.submarket]
@@ -92,8 +72,12 @@ class Asset:
             bits.append(f"Grade {self.grade}")
         if self.sqft:
             bits.append(f"{self.sqft:,} sq ft")
-        if self.lease_expiry:
+        if self.break_date:
+            bits.append(f"break {self.break_date}")
+        elif self.lease_expiry:
             bits.append(f"expires {self.lease_expiry}")
+        if self.epc_rating:
+            bits.append(f"EPC {self.epc_rating}")
         return " · ".join(bits)
 
 
@@ -118,8 +102,14 @@ class Watchlist:
         return len(self.assets)
 
     def matching(self, submarket: str | None = None, grade: str | None = None,
-                 min_sqft: int | None = None) -> list[str]:
-        """Names of assets a signal touches. Empty watchlist returns []."""
+                 min_sqft: int | None = None,
+                 lease_event_between: tuple[str, str] | None = None) -> list[Asset]:
+        """Assets a signal touches. Empty watchlist returns [].
+
+        Returns Asset objects, not names: a caller building a per-asset reason
+        needs the passing rent and the EPC, and a second lookup by name is a
+        drift bug waiting for the first duplicate building name.
+        """
         out = []
         for a in self.assets:
             if submarket and not self.index.covers(a.submarket, submarket):
@@ -128,7 +118,14 @@ class Watchlist:
                 continue
             if min_sqft and (a.sqft or 0) < min_sqft:
                 continue
-            out.append(a.name)
+            if lease_event_between:
+                event = a.lease_event()
+                if event is None:
+                    continue
+                lo, hi = (parse_ym(b) for b in lease_event_between)
+                if not lo <= parse_ym(event) <= hi:
+                    continue
+            out.append(a)
         return out
 
     def summary(self) -> str:

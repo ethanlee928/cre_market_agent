@@ -15,15 +15,46 @@ the best line to carry into a client meeting):
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Callable
 
 from .store import Fact, Store
+from .watchlist import Asset
 
 Severity = str
 RISK, WATCH, OPPORTUNITY = "RISK", "WATCH", "OPPORTUNITY"
 
 _RANK = {RISK: 0, WATCH: 1, OPPORTUNITY: 2}
+
+# The controlled vocabulary a matched signal closes on. "monitor" is absent by
+# design and asserted absent by test: it is the word that lets an analyst end a
+# paragraph without deciding anything, and this product exists to decide.
+# "hold" is a real answer here, reached only with its reason stated.
+ACTIONS = ("regear", "refurbish", "re-price", "hold", "defer capex",
+           "start the conversation")
+
+# A pipeline period like "2026H2-2029". Read off Period.raw rather than the
+# parsed object: store._RANGE discards the half marker, so Period reports
+# months (1, 12) and a window that does not open until July would answer True
+# for Q1. Lease dates are (year, month) tuples throughout -- see
+# watchlist.parse_ym.
+_PIPELINE_PERIOD = re.compile(r"^(\d{4})(H[12]|Q[1-4])?-(\d{4})$")
+_WINDOW_OPENS = {"H1": 1, "H2": 7, "Q1": 1, "Q2": 4, "Q3": 7, "Q4": 10}
+
+
+def _pipeline_window(fact: Fact) -> tuple[str, str] | None:
+    """("2026-07", "2029-12") from a fact whose period is a published range.
+
+    A published window, not a tolerance invented around a point estimate. The
+    alternative was +/-12 months either side of completions_forecast, which
+    also catches both breaks but is a margin no source ever stated.
+    """
+    m = _PIPELINE_PERIOD.match(fact.period.raw)
+    if not m:
+        return None
+    start_year, marker, end_year = m.groups()
+    return f"{start_year}-{_WINDOW_OPENS.get(marker or 'H1', 1):02d}", f"{end_year}-12"
 
 
 @dataclass
@@ -34,6 +65,13 @@ class Signal:
     detail: str
     evidence: list[Fact] = field(default_factory=list)
     affected: list[str] = field(default_factory=list)   # watchlist asset names
+    # Why this signal touches each named asset, and what to do about it. Kept
+    # as two str-to-str maps rather than a dataclass: `affected` stays a list
+    # of names so `a.name in s.affected` keeps working in the sidebar, and both
+    # of these serialise straight into a Gemini function response, where a
+    # dataclass would hit the blanket except in gemini.py and vanish.
+    match_reasons: dict[str, str] = field(default_factory=dict)
+    match_actions: dict[str, str] = field(default_factory=dict)
 
     def citations(self) -> list[str]:
         return sorted({f.source.cite() for f in self.evidence})
@@ -72,7 +110,7 @@ def quality_spread(store: Store, watchlist=None) -> list[Signal]:
             continue
 
         b_level = b.render_value() if b.value is not None else "level not published"
-        out.append(Signal(
+        sig = Signal(
             id=f"quality_spread:{sub}",
             severity=RISK,
             headline=f"{sub} Grade B rents falling while Grade A rises "
@@ -85,15 +123,90 @@ def quality_spread(store: Store, watchlist=None) -> list[Signal]:
                 f"to keep widening."
             ),
             evidence=[a, b],
-            affected=_match(watchlist, submarket=sub, grade="B"),
-        ))
+        )
+        for asset in _assets(watchlist, submarket=sub, grade="B"):
+            sig.affected.append(asset.name)
+            reason, action = _reversion(asset, a, b)
+            sig.match_reasons[asset.name] = reason
+            sig.match_actions[asset.name] = action
+        out.append(sig)
     return out
+
+
+def _epc_ready(asset: Asset) -> bool:
+    """Is this building's EPC good enough to justify spending on it?
+
+    C or better. Deliberately no compliance deadline in code or narrative: the
+    MEES dates are unsettled, and a fabricated deadline is the same failure
+    class as quoting a rent the source never published.
+    """
+    return bool(asset.epc_rating) and asset.epc_rating.upper() <= "C"
+
+
+def _reversion(asset: Asset, grade_a: Fact, grade_b: Fact) -> tuple[str, str]:
+    """What the grade spread means for one building, and what to do about it.
+
+    Computed in Python, not asked of the model. The brief renders on load with
+    no API key, so a model-authored figure or verb would leave the headline
+    feature blank for the reader most likely to be evaluating it.
+
+    Two figures, never three. Passing-minus-Grade-B and Grade-A-minus-passing
+    sum exactly to the grade gap, so rendering all three invites a reader to
+    add two of them and double-count the same spread.
+    """
+    bits: list[str] = []
+    action = "hold"
+    passing, sqft = asset.passing_rent_psf, asset.sqft
+
+    # E-4: a Fact whose value is None is still truthy, and West End
+    # grade_b_rent_avg is exactly that -- Savills published the -11.3% and
+    # withheld the level. The level test is `is not None`, never bare
+    # truthiness, or this sentence asserts a comparison it never made.
+    if passing is not None and sqft and grade_b.value is not None:
+        gap = passing - grade_b.value
+        bits.append(
+            f"passing £{passing:,.2f} psf against the {grade_b.submarket} Grade B "
+            f"average of £{grade_b.value:,.2f} psf ({grade_b.period}), which is "
+            f"£{abs(gap) * sqft:,.0f} a year "
+            f"{'above' if gap > 0 else 'below'} market across {sqft:,} sq ft, "
+            f"exposed at the next review"
+        )
+        if gap > 0:
+            action = "regear"
+    elif grade_b.value is None:
+        d = grade_b.delta("yoy")
+        bits.append(
+            f"no reversion figure is computable: Savills publishes the "
+            f"{grade_b.submarket} Grade B change"
+            + (f" ({d.render()})" if d else "")
+            + " but not the level, so there is nothing to measure the passing rent against"
+        )
+
+    if passing is not None and sqft and grade_a.value is not None:
+        uplift = (grade_a.value - passing) * sqft
+        if uplift > 0:
+            bits.append(
+                f"reaching the {grade_a.submarket} Grade A average of "
+                f"£{grade_a.value:,.2f} psf would be worth £{uplift:,.0f} a year gross, "
+                f"before capex and voids"
+            )
+            if action == "hold":
+                action = "refurbish" if _epc_ready(asset) else "defer capex"
+
+    if not bits:
+        bits.append("no passing rent or floor area on file, so nothing is computable "
+                    "for this building beyond the market move above")
+    if action == "defer capex" and asset.epc_rating:
+        bits.append(f"EPC {asset.epc_rating} is below the standard several of those "
+                    f"proposals would require, which comes first")
+    return "; ".join(bits) + ".", action
 
 
 def supply_shock(store: Store, watchlist=None) -> list[Signal]:
     """A record completion year landing with most of it unlet."""
     f = store.get("completions_forecast", "Central London")
     uc = store.get("under_construction", "Central London")
+    pipeline = store.get("pipeline_to_2029", "Central London")
     if not f:
         return []
 
@@ -119,15 +232,39 @@ def supply_shock(store: Store, watchlist=None) -> list[Signal]:
         )
     detail += "New Grade A space arriving unlet puts pressure on headline rents and incentives."
 
-    return [Signal(
+    window = _pipeline_window(pipeline) if pipeline else None
+    if window and pipeline:
+        detail += (
+            f" Over {pipeline.period} the pipeline runs to {pipeline.render_value()} "
+            f"across {pipeline.extras.get('schemes', 0):.0f} schemes, "
+            f"{pipeline.extras.get('prelet_pct', 0):.0f}% pre-let."
+        )
+
+    sig = Signal(
         id="supply_shock:Central London",
         severity=WATCH,
         headline=f"Record {f.render_value()} of completions in {f.period}, "
                  f"only {prelet:.0f}% pre-let",
         detail=detail,
-        evidence=[x for x in (f, uc) if x],
-        affected=_match(watchlist, submarket=None),
-    )]
+        evidence=[x for x in (f, uc, pipeline) if x],
+    )
+
+    # Was `_match(watchlist, submarket=None)`, which filters on nothing and so
+    # claimed every asset in the portfolio -- the page asserting an exposure it
+    # could not name a reason for. A market-wide signal earns a building only
+    # when that building has a decision falling inside the published window.
+    if window and pipeline:
+        for asset in _assets(watchlist, lease_event_between=window):
+            sig.affected.append(asset.name)
+            event, kind = asset.lease_event(), "break" if asset.break_date else "lease expiry"
+            sig.match_reasons[asset.name] = (
+                f"its {kind} at {event} falls inside the {pipeline.period} delivery "
+                f"window, so this is the market it would be re-letting into, against "
+                f"{pipeline.render_value()} of new space that is "
+                f"{pipeline.extras.get('prelet_pct', 0):.0f}% pre-let."
+            )
+            sig.match_actions[asset.name] = "start the conversation"
+    return [sig]
 
 
 def large_occupier_squeeze(store: Store, watchlist=None) -> list[Signal]:
@@ -161,21 +298,98 @@ def large_occupier_squeeze(store: Store, watchlist=None) -> list[Signal]:
             + ". Landlords of large, central, best-in-class space have pricing power."
         )
 
-    return [Signal(
+    sig = Signal(
         id="large_occupier_squeeze:Central London",
         severity=OPPORTUNITY,
         headline=f"{reqs.value:.0f} large requirements chasing {opts.value:.0f} options "
                  f"({ratio:.1f}:1)",
         detail=detail.strip(),
         evidence=[x for x in (opts, reqs, demand) if x],
-        affected=_match(watchlist, submarket=None, min_sqft=100_000),
-    )]
+    )
+    for asset in _assets(watchlist, min_sqft=100_000):
+        sig.affected.append(asset.name)
+        sig.match_reasons[asset.name] = (
+            f"at {asset.sqft:,} sq ft it is one of the large floorplates in short "
+            f"supply: {reqs.value:.0f} live requirements against {opts.value:.0f} "
+            f"available options is pricing power, and nothing about it needs acting "
+            f"on before the next review."
+        )
+        sig.match_actions[asset.name] = "hold"
+    return [sig]
+
+
+def sector_demand(store: Store, watchlist=None) -> list[Signal]:
+    """A sector whose completed deals look weak while its pipeline says otherwise.
+
+    Take-up is a trailing number: deals already signed. Space under offer is
+    leading: deals about to sign. When a sector posts its weakest take-up in
+    years while holding an outsized share of what is under offer, the weak
+    figure is the old news and the pipeline is the story. That is the sector
+    to point a leasing campaign at.
+
+    This conclusion appears nowhere in the source. It needs two of its tables
+    read against each other -- the sector take-up breakdown and the
+    under-offer total -- which is the difference between summarising a report
+    and reading a market.
+
+    affected stays empty on purpose. Sectors are occupier groupings, not
+    geographies, so no watchlist asset is genuinely touched by this. Claiming
+    otherwise would inflate the "N of M signals touch your portfolio" count
+    with a signal that does not.
+    """
+    total = store.get("under_offer", "Central London")
+    out = []
+    for f in store.find(metric="take_up", sector="__any__"):
+        if not f.sector:
+            continue
+        taken = f.extras.get("share_pct")
+        pipeline = f.extras.get("share_of_under_offer_pct")
+        trailing = f.delta("vs_avg")
+        if taken is None or pipeline is None or trailing is None:
+            continue
+        if trailing.value >= 0 or pipeline < taken * 1.5:
+            continue
+
+        weight = pipeline / taken
+        detail = (
+            f"{f.sector} take-up ran to {f.render_value()} in {f.period}, "
+            f"{trailing.render()} against its {trailing.basis.replace('_', ' ')} "
+            f"and the weakest in the series. Read alone that is a sector in "
+            f"retreat. But it accounts for {pipeline:.0f}% of space currently "
+            f"under offer while making up only {taken:.0f}% of take-up "
+            f"-- {weight:.1f} times its completed weight"
+        )
+        if total:
+            detail += f", against a Central London total of {total.render_value()}"
+        detail += (
+            ". Take-up counts deals already signed; under offer counts deals "
+            "about to sign. The two disagree, and the leading number is the "
+            "one that has not happened yet. Point the next leasing campaign "
+            "here rather than at the sectors already posting records."
+        )
+
+        out.append((weight, Signal(
+            id=f"sector_demand:{f.sector}",
+            severity=OPPORTUNITY,
+            headline=f"{f.sector} take-up at a series low, yet {pipeline:.0f}% of "
+                     f"space under offer against {taken:.0f}% of take-up",
+            detail=detail,
+            evidence=[x for x in (f, total) if x],
+            affected=[],
+        )))
+
+    # Rank on the computed weight, never by reading a number back out of the
+    # headline. Parsing prose for a figure is the defect this store exists to
+    # prevent, and it does not stop being one because the prose is ours.
+    out.sort(key=lambda pair: -pair[0])
+    return [sig for _, sig in out[:1]]
 
 
 DETECTORS: list[Callable[..., list[Signal]]] = [
     quality_spread,
     supply_shock,
     large_occupier_squeeze,
+    sector_demand,
 ]
 
 
@@ -189,9 +403,16 @@ def detect_all(store: Store, watchlist=None) -> list[Signal]:
 
 # --------------------------------------------------------------------------
 
-def _match(watchlist, submarket: str | None = None, grade: str | None = None,
-           min_sqft: int | None = None) -> list[str]:
-    """Which watchlist assets does this signal touch? Empty list is fine."""
+def _assets(watchlist, submarket: str | None = None, grade: str | None = None,
+            min_sqft: int | None = None,
+            lease_event_between: tuple[str, str] | None = None) -> list[Asset]:
+    """Which watchlist assets does this signal touch? Empty list is fine.
+
+    Returns Assets rather than names because every caller now builds a reason
+    from the building's own figures. An empty or absent watchlist returns [],
+    which is the market-wide base case and must stay fully functional.
+    """
     if not watchlist:
         return []
-    return watchlist.matching(submarket=submarket, grade=grade, min_sqft=min_sqft)
+    return watchlist.matching(submarket=submarket, grade=grade, min_sqft=min_sqft,
+                              lease_event_between=lease_event_between)

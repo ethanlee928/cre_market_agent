@@ -10,84 +10,594 @@
   },
   "period": "2026Q2",
   "facts": [
-    {"metric": "take_up", "submarket": "Central London", "period": "2026Q2", "value": 2400000, "unit": "sqft", "vs_prior_year_pct": -13.0, "vs_10yr_q2_avg_pct": 9.0, "transactions": 192},
-    {"metric": "take_up", "submarket": "Central London", "period": "2026H1", "value": 4680000, "unit": "sqft", "vs_10yr_h1_avg_pct": 4.0},
-    {"metric": "take_up", "submarket": "West End", "period": "2026H1", "value": 2200000, "unit": "sqft", "vs_10yr_avg_pct": 32.0, "note": "Strongest first half since 2022"},
-    {"metric": "take_up", "submarket": "City", "period": "2026H1", "value": 2600000, "unit": "sqft", "vs_10yr_avg_pct": -4.0},
-    {"metric": "grade_a_share_of_take_up", "submarket": "Central London", "period": "2026H1", "value": 94.0, "unit": "pct"},
-    {"metric": "breeam_exc_out_share_of_take_up", "submarket": "Central London", "period": "2026H1", "value": 65.0, "unit": "pct"},
-
-    {"metric": "supply", "submarket": "Central London", "period": "2026Q2", "value": 18700000, "unit": "sqft", "qoq_change": -500000},
-    {"metric": "vacancy_rate", "submarket": "Central London", "period": "2026Q2", "value": 7.2, "unit": "pct", "qoq_change_bps": -20, "vs_long_run_avg_bps": 80},
-    {"metric": "vacancy_rate", "submarket": "City", "period": "2026Q2", "value": 7.0, "unit": "pct", "qoq_change_bps": 0, "vs_10yr_avg_bps": 10},
-    {"metric": "vacancy_rate", "submarket": "City Core", "period": "2026Q2", "value": 5.9, "unit": "pct", "vs_10yr_avg_bps": -200},
-    {"metric": "vacancy_rate", "submarket": "City Fringe", "period": "2026Q2", "value": 8.0, "unit": "pct", "vs_10yr_avg_bps": 150},
-    {"metric": "vacancy_rate", "submarket": "West End", "period": "2026Q2", "value": null, "unit": "pct", "qoq_change_bps": -30, "vs_10yr_avg_bps": 190, "note": "Level not stated in source; only the QoQ and vs-average deltas are given."},
-    {"metric": "vacancy_rate", "submarket": "West End Core (Mayfair/St James's)", "period": "2026Q2", "value": 4.4, "unit": "pct", "vs_10yr_avg_bps": -70},
-    {"metric": "vacancy_rate", "submarket": "Hammersmith", "period": "2026Q2", "value": 22.0, "unit": "pct"},
-    {"metric": "vacancy_rate", "submarket": "VNEB", "period": "2026Q2", "value": 18.0, "unit": "pct"},
-    {"metric": "supply_breeam_exc_out_share", "submarket": "Central London", "period": "2026Q2", "value": 43.0, "unit": "pct", "absolute_sqft": 8000000},
-    {"metric": "supply_small_floorplate_share", "submarket": "Central London", "period": "2026Q2", "value": 51.0, "unit": "pct", "note": "Share of supply comprising floorplates under 5,000 sq ft"},
-    {"metric": "large_grade_a_options", "submarket": "Central London", "period": "2026Q2", "value": 21, "unit": "count", "note": "Grade A options >=100k sq ft available now or within 6 months; only 5 in Core submarkets"},
-    {"metric": "large_active_requirements", "submarket": "Central London", "period": "2026Q2", "value": 41, "unit": "count", "note": "Active occupier requirements over 100k sq ft"},
-
-    {"metric": "under_offer", "submarket": "Central London", "period": "2026H1", "value": 3100000, "unit": "sqft", "qoq_change_pct": 11.0, "vs_10yr_avg_pct": 6.0},
-    {"metric": "under_offer_regear", "submarket": "Central London", "period": "2026H1", "value": 1400000, "unit": "sqft", "note": "93% from occupiers currently in 50,000 sq ft or more"},
-    {"metric": "active_demand", "submarket": "Central London", "period": "2026H1", "value": 15700000, "unit": "sqft", "vs_long_run_avg_pct": 69.0, "note": "Record level"},
-    {"metric": "active_demand", "submarket": "Central London", "sector": "Financial & Banking", "period": "2026H1", "value": 5800000, "unit": "sqft", "ytd_change_pct": 30.0, "note": "Record"},
-    {"metric": "active_demand", "submarket": "Central London", "sector": "Tech & Media", "period": "2026H1", "value": 3100000, "unit": "sqft", "ytd_change_pct": 26.0, "note": "Record"},
-    {"metric": "active_demand", "submarket": "Central London", "sector": "Professional Services", "period": "2026H1", "value": 3580000, "unit": "sqft", "ytd_change_pct": 23.0, "note": "Record"},
-    {"metric": "expanding_occupier_share", "submarket": "Central London", "period": "2026H1", "value": 43.0, "unit": "pct", "note": "vs 12% seeking to decrease footprint; 15% are new market entrants"},
-
-    {"metric": "completions", "submarket": "Central London", "period": "2026Q2", "value": 1400000, "unit": "sqft", "schemes": 11},
-    {"metric": "completions", "submarket": "Central London", "period": "2026H1", "value": 2800000, "unit": "sqft", "vs_10yr_avg_pct": 11.0},
-    {"metric": "completions_forecast", "submarket": "Central London", "period": "2026", "value": 7700000, "unit": "sqft", "vs_10yr_avg_pct": 43.0, "prelet_pct": 35.0, "note": "Record year; a further 4.9m sq ft scheduled for H2"},
-    {"metric": "under_construction", "submarket": "Central London", "period": "2026H1", "value": 16100000, "unit": "sqft", "prelet_pct": 25.0},
-    {"metric": "development_starts", "submarket": "Central London", "period": "2026H1", "value": 1500000, "unit": "sqft", "note": "Only one new-build start (Delta, Paddington, 234,000 sq ft, TfL/Helical); remaining 14 starts were refurbishments"},
-    {"metric": "pipeline_to_2029", "submarket": "Central London", "period": "2026H2-2029", "value": 22000000, "unit": "sqft", "schemes": 148, "not_started_pct": 28.0, "prelet_pct": 18.0, "note": "77% of schemes scheduled for 2029 have yet to start on site; pre-let share is 5% below the five-year average"},
-
-    {"metric": "prime_rent", "submarket": "City", "period": "2026Q2", "value": 116.73, "unit": "gbp_psf", "yoy_change_pct": 19.0, "note": "Record set in Q1; 11 transactions above £100/sq ft so far this year"},
-    {"metric": "prime_rent", "submarket": "West End", "period": "2026H1", "value": 175.10, "unit": "gbp_psf", "vs_h1_2025_pct": 2.3, "forecast_2026_growth_pct": 5.9},
-    {"metric": "top_rent", "submarket": "West End", "period": "2026Q2", "value": 182.50, "unit": "gbp_psf", "note": "Strategic Value Partners, part 2nd floor (8,785 sq ft), Devonshire House, 1 Mayfair Place, W1"},
-    {"metric": "top_rent", "submarket": "West End", "period": "2026Q1", "value": 201.00, "unit": "gbp_psf", "note": "Softbank, 1st floor, 77 Grosvenor Street; highest achieved YTD"},
-    {"metric": "grade_a_rent_avg", "submarket": "City", "period": "2026H1", "value": 76.21, "unit": "gbp_psf", "vs_h1_2025_pct": 7.0},
-    {"metric": "grade_a_rent_avg", "submarket": "West End", "period": "2026H1", "value": 106.17, "unit": "gbp_psf", "yoy_change_pct": 4.0, "note": "Surpassed £100/sq ft for the first time"},
-    {"metric": "grade_b_rent_avg", "submarket": "City", "period": "2026H1", "value": 45.66, "unit": "gbp_psf", "yoy_change_pct": -2.6},
-    {"metric": "grade_b_rent_avg", "submarket": "West End", "period": "2026H1", "value": null, "unit": "gbp_psf", "yoy_change_pct": -11.3, "note": "Level not stated in source"},
-    {"metric": "breeam_rent_premium", "submarket": "West End", "period": "2026H1", "value": 49.0, "unit": "pct", "note": "vs non-rated buildings"},
-    {"metric": "breeam_rent_premium", "submarket": "City", "period": "2026H1", "value": 39.0, "unit": "pct", "note": "vs non-rated buildings"},
-
-    {"metric": "investment_turnover", "submarket": "Central London", "period": "2026Q2", "value": 2060000000, "unit": "gbp", "transactions": 43, "qoq_change_pct": 12.0, "vs_5yr_avg_pct": -3.0, "vs_10yr_avg_pct": -27.0, "note": "Barclays' £750m purchase of 1 Churchill Place E14 was 36% of turnover; excluding it, £1.31bn (-29% on Q1)"},
-    {"metric": "investment_turnover", "submarket": "Central London", "period": "2026H1", "value": 3890000000, "unit": "gbp", "transactions": 94, "yoy_change_pct": -15.0, "vs_10yr_avg_pct": -35.0},
-    {"metric": "avg_lot_size", "submarket": "Central London", "period": "2026H1", "value": 41300000, "unit": "gbp"},
-    {"metric": "prime_yield", "submarket": "West End", "period": "2026Q2", "value": 3.75, "unit": "pct"},
-    {"metric": "prime_yield", "submarket": "City", "period": "2026Q2", "value": 5.25, "unit": "pct"}
+    {
+      "metric": "take_up",
+      "submarket": "Central London",
+      "period": "2026Q2",
+      "value": 2400000,
+      "unit": "sqft",
+      "vs_prior_year_pct": -13.0,
+      "vs_10yr_q2_avg_pct": 9.0,
+      "transactions": 192
+    },
+    {
+      "metric": "take_up",
+      "submarket": "Central London",
+      "period": "2026H1",
+      "value": 4680000,
+      "unit": "sqft",
+      "vs_10yr_h1_avg_pct": 4.0
+    },
+    {
+      "metric": "take_up",
+      "submarket": "West End",
+      "period": "2026H1",
+      "value": 2200000,
+      "unit": "sqft",
+      "vs_10yr_avg_pct": 32.0,
+      "note": "Strongest first half since 2022"
+    },
+    {
+      "metric": "take_up",
+      "submarket": "City",
+      "period": "2026H1",
+      "value": 2600000,
+      "unit": "sqft",
+      "vs_10yr_avg_pct": -4.0
+    },
+    {
+      "metric": "grade_a_share_of_take_up",
+      "submarket": "Central London",
+      "period": "2026H1",
+      "value": 94.0,
+      "unit": "pct"
+    },
+    {
+      "metric": "breeam_exc_out_share_of_take_up",
+      "submarket": "Central London",
+      "period": "2026H1",
+      "value": 65.0,
+      "unit": "pct"
+    },
+    {
+      "metric": "supply",
+      "submarket": "Central London",
+      "period": "2026Q2",
+      "value": 18700000,
+      "unit": "sqft",
+      "qoq_change": -500000
+    },
+    {
+      "metric": "vacancy_rate",
+      "submarket": "Central London",
+      "period": "2026Q2",
+      "value": 7.2,
+      "unit": "pct",
+      "qoq_change_bps": -20,
+      "vs_long_run_avg_bps": 80
+    },
+    {
+      "metric": "vacancy_rate",
+      "submarket": "City",
+      "period": "2026Q2",
+      "value": 7.0,
+      "unit": "pct",
+      "qoq_change_bps": 0,
+      "vs_10yr_avg_bps": 10
+    },
+    {
+      "metric": "vacancy_rate",
+      "submarket": "City Core",
+      "period": "2026Q2",
+      "value": 5.9,
+      "unit": "pct",
+      "vs_10yr_avg_bps": -200
+    },
+    {
+      "metric": "vacancy_rate",
+      "submarket": "City Fringe",
+      "period": "2026Q2",
+      "value": 8.0,
+      "unit": "pct",
+      "vs_10yr_avg_bps": 150
+    },
+    {
+      "metric": "vacancy_rate",
+      "submarket": "West End",
+      "period": "2026Q2",
+      "value": null,
+      "unit": "pct",
+      "qoq_change_bps": -30,
+      "vs_10yr_avg_bps": 190,
+      "note": "Level not stated in source; only the QoQ and vs-average deltas are given."
+    },
+    {
+      "metric": "vacancy_rate",
+      "submarket": "West End Core (Mayfair/St James's)",
+      "period": "2026Q2",
+      "value": 4.4,
+      "unit": "pct",
+      "vs_10yr_avg_bps": -70
+    },
+    {
+      "metric": "vacancy_rate",
+      "submarket": "Hammersmith",
+      "period": "2026Q2",
+      "value": 22.0,
+      "unit": "pct"
+    },
+    {
+      "metric": "vacancy_rate",
+      "submarket": "VNEB",
+      "period": "2026Q2",
+      "value": 18.0,
+      "unit": "pct"
+    },
+    {
+      "metric": "supply_breeam_exc_out_share",
+      "submarket": "Central London",
+      "period": "2026Q2",
+      "value": 43.0,
+      "unit": "pct",
+      "absolute_sqft": 8000000
+    },
+    {
+      "metric": "supply_small_floorplate_share",
+      "submarket": "Central London",
+      "period": "2026Q2",
+      "value": 51.0,
+      "unit": "pct",
+      "note": "Share of supply comprising floorplates under 5,000 sq ft"
+    },
+    {
+      "metric": "large_grade_a_options",
+      "submarket": "Central London",
+      "period": "2026Q2",
+      "value": 21,
+      "unit": "count",
+      "note": "Grade A options >=100k sq ft available now or within 6 months; only 5 in Core submarkets"
+    },
+    {
+      "metric": "large_active_requirements",
+      "submarket": "Central London",
+      "period": "2026Q2",
+      "value": 41,
+      "unit": "count",
+      "note": "Active occupier requirements over 100k sq ft"
+    },
+    {
+      "metric": "under_offer",
+      "submarket": "Central London",
+      "period": "2026H1",
+      "value": 3100000,
+      "unit": "sqft",
+      "qoq_change_pct": 11.0,
+      "vs_10yr_avg_pct": 6.0
+    },
+    {
+      "metric": "under_offer_regear",
+      "submarket": "Central London",
+      "period": "2026H1",
+      "value": 1400000,
+      "unit": "sqft",
+      "note": "93% from occupiers currently in 50,000 sq ft or more"
+    },
+    {
+      "metric": "active_demand",
+      "submarket": "Central London",
+      "period": "2026H1",
+      "value": 15700000,
+      "unit": "sqft",
+      "vs_long_run_avg_pct": 69.0,
+      "note": "Record level"
+    },
+    {
+      "metric": "active_demand",
+      "submarket": "Central London",
+      "sector": "Financial & Banking",
+      "period": "2026H1",
+      "value": 5800000,
+      "unit": "sqft",
+      "ytd_change_pct": 30.0,
+      "note": "Record"
+    },
+    {
+      "metric": "active_demand",
+      "submarket": "Central London",
+      "sector": "Tech & Media",
+      "period": "2026H1",
+      "value": 3100000,
+      "unit": "sqft",
+      "ytd_change_pct": 26.0,
+      "note": "Record"
+    },
+    {
+      "metric": "active_demand",
+      "submarket": "Central London",
+      "sector": "Professional Services",
+      "period": "2026H1",
+      "value": 3580000,
+      "unit": "sqft",
+      "ytd_change_pct": 23.0,
+      "note": "Record"
+    },
+    {
+      "metric": "expanding_occupier_share",
+      "submarket": "Central London",
+      "period": "2026H1",
+      "value": 43.0,
+      "unit": "pct",
+      "note": "vs 12% seeking to decrease footprint; 15% are new market entrants"
+    },
+    {
+      "metric": "completions",
+      "submarket": "Central London",
+      "period": "2026Q2",
+      "value": 1400000,
+      "unit": "sqft",
+      "schemes": 11
+    },
+    {
+      "metric": "completions",
+      "submarket": "Central London",
+      "period": "2026H1",
+      "value": 2800000,
+      "unit": "sqft",
+      "vs_10yr_avg_pct": 11.0
+    },
+    {
+      "metric": "completions_forecast",
+      "submarket": "Central London",
+      "period": "2026",
+      "value": 7700000,
+      "unit": "sqft",
+      "vs_10yr_avg_pct": 43.0,
+      "prelet_pct": 35.0,
+      "note": "Record year; a further 4.9m sq ft scheduled for H2"
+    },
+    {
+      "metric": "under_construction",
+      "submarket": "Central London",
+      "period": "2026H1",
+      "value": 16100000,
+      "unit": "sqft",
+      "prelet_pct": 25.0
+    },
+    {
+      "metric": "development_starts",
+      "submarket": "Central London",
+      "period": "2026H1",
+      "value": 1500000,
+      "unit": "sqft",
+      "note": "Only one new-build start (Delta, Paddington, 234,000 sq ft, TfL/Helical); remaining 14 starts were refurbishments"
+    },
+    {
+      "metric": "pipeline_to_2029",
+      "submarket": "Central London",
+      "period": "2026H2-2029",
+      "value": 22000000,
+      "unit": "sqft",
+      "schemes": 148,
+      "not_started_pct": 28.0,
+      "prelet_pct": 18.0,
+      "note": "77% of schemes scheduled for 2029 have yet to start on site; pre-let share is 5% below the five-year average"
+    },
+    {
+      "metric": "prime_rent",
+      "submarket": "City",
+      "period": "2026Q2",
+      "value": 116.73,
+      "unit": "gbp_psf",
+      "yoy_change_pct": 19.0,
+      "note": "Record set in Q1; 11 transactions above £100/sq ft so far this year"
+    },
+    {
+      "metric": "prime_rent",
+      "submarket": "West End",
+      "period": "2026H1",
+      "value": 175.1,
+      "unit": "gbp_psf",
+      "vs_h1_2025_pct": 2.3,
+      "forecast_2026_growth_pct": 5.9
+    },
+    {
+      "metric": "top_rent",
+      "submarket": "West End",
+      "period": "2026Q2",
+      "value": 182.5,
+      "unit": "gbp_psf",
+      "note": "Strategic Value Partners, part 2nd floor (8,785 sq ft), Devonshire House, 1 Mayfair Place, W1"
+    },
+    {
+      "metric": "top_rent",
+      "submarket": "West End",
+      "period": "2026Q1",
+      "value": 201.0,
+      "unit": "gbp_psf",
+      "note": "Softbank, 1st floor, 77 Grosvenor Street; highest achieved YTD"
+    },
+    {
+      "metric": "grade_a_rent_avg",
+      "submarket": "City",
+      "period": "2026H1",
+      "value": 76.21,
+      "unit": "gbp_psf",
+      "vs_h1_2025_pct": 7.0
+    },
+    {
+      "metric": "grade_a_rent_avg",
+      "submarket": "West End",
+      "period": "2026H1",
+      "value": 106.17,
+      "unit": "gbp_psf",
+      "yoy_change_pct": 4.0,
+      "note": "Surpassed £100/sq ft for the first time"
+    },
+    {
+      "metric": "grade_b_rent_avg",
+      "submarket": "City",
+      "period": "2026H1",
+      "value": 45.66,
+      "unit": "gbp_psf",
+      "yoy_change_pct": -2.6
+    },
+    {
+      "metric": "grade_b_rent_avg",
+      "submarket": "West End",
+      "period": "2026H1",
+      "value": null,
+      "unit": "gbp_psf",
+      "yoy_change_pct": -11.3,
+      "note": "Level not stated in source"
+    },
+    {
+      "metric": "breeam_rent_premium",
+      "submarket": "West End",
+      "period": "2026H1",
+      "value": 49.0,
+      "unit": "pct",
+      "note": "vs non-rated buildings"
+    },
+    {
+      "metric": "breeam_rent_premium",
+      "submarket": "City",
+      "period": "2026H1",
+      "value": 39.0,
+      "unit": "pct",
+      "note": "vs non-rated buildings"
+    },
+    {
+      "metric": "investment_turnover",
+      "submarket": "Central London",
+      "period": "2026Q2",
+      "value": 2060000000,
+      "unit": "gbp",
+      "transactions": 43,
+      "qoq_change_pct": 12.0,
+      "vs_5yr_avg_pct": -3.0,
+      "vs_10yr_avg_pct": -27.0,
+      "note": "Barclays' £750m purchase of 1 Churchill Place E14 was 36% of turnover; excluding it, £1.31bn (-29% on Q1)"
+    },
+    {
+      "metric": "investment_turnover",
+      "submarket": "Central London",
+      "period": "2026H1",
+      "value": 3890000000,
+      "unit": "gbp",
+      "transactions": 94,
+      "yoy_change_pct": -15.0,
+      "vs_10yr_avg_pct": -35.0
+    },
+    {
+      "metric": "avg_lot_size",
+      "submarket": "Central London",
+      "period": "2026H1",
+      "value": 41300000,
+      "unit": "gbp"
+    },
+    {
+      "metric": "prime_yield",
+      "submarket": "West End",
+      "period": "2026Q2",
+      "value": 3.75,
+      "unit": "pct"
+    },
+    {
+      "metric": "prime_yield",
+      "submarket": "City",
+      "period": "2026Q2",
+      "value": 5.25,
+      "unit": "pct"
+    }
   ],
   "sector_take_up_2026H1": [
-    {"sector": "Tech & Media", "share_pct": 31.0, "vs_long_term_h1_avg_pct": 64.0, "note": "Strongest first half since 2017; AI-related occupiers were almost half of sector take-up"},
-    {"sector": "Insurance & Financial", "value": 878112, "unit": "sqft", "share_pct": 20.0, "transactions": 76, "vs_5yr_avg_pct": -21.0, "note": "Lowest since H1 2021, but the sector is 41% of space currently under offer"},
-    {"sector": "Professional Services", "value": 549000, "unit": "sqft", "transactions": 24, "vs_10yr_h1_avg_pct": 12.0, "note": "Legal sub-sector was 74% of sector take-up"},
-    {"sector": "Serviced Office Providers", "value": 338000, "unit": "sqft", "yoy_change_pct": 16.0, "note": "12 centres acquired"},
-    {"sector": "Creative", "value": 255000, "unit": "sqft", "vs_5yr_avg_pct": 7.0, "note": "Rebound from a 30-year low in H1 2025"},
-    {"sector": "AI (sub-sector)", "value": 645000, "unit": "sqft", "note": "Almost half of all space taken by AI-related companies in Central London since the sector became active"}
+    {
+      "sector": "Tech & Media",
+      "share_pct": 31.0,
+      "vs_long_term_h1_avg_pct": 64.0,
+      "note": "Strongest first half since 2017; AI-related occupiers were almost half of sector take-up"
+    },
+    {
+      "sector": "Insurance & Financial",
+      "value": 878112,
+      "unit": "sqft",
+      "share_pct": 20.0,
+      "share_of_under_offer_pct": 41.0,
+      "transactions": 76,
+      "vs_5yr_avg_pct": -21.0,
+      "note": "Lowest since H1 2021, but the sector is 41% of space currently under offer"
+    },
+    {
+      "sector": "Professional Services",
+      "value": 549000,
+      "unit": "sqft",
+      "transactions": 24,
+      "vs_10yr_h1_avg_pct": 12.0,
+      "note": "Legal sub-sector was 74% of sector take-up"
+    },
+    {
+      "sector": "Serviced Office Providers",
+      "value": 338000,
+      "unit": "sqft",
+      "yoy_change_pct": 16.0,
+      "note": "12 centres acquired"
+    },
+    {
+      "sector": "Creative",
+      "value": 255000,
+      "unit": "sqft",
+      "vs_5yr_avg_pct": 7.0,
+      "note": "Rebound from a 30-year low in H1 2025"
+    },
+    {
+      "sector": "AI (sub-sector)",
+      "value": 645000,
+      "unit": "sqft",
+      "note": "Almost half of all space taken by AI-related companies in Central London since the sector became active"
+    }
   ],
   "events": [
-    {"type": "letting", "date": "2026Q2", "occupier": "Anthropic", "building": "1 Triton Square, NW1", "floors": "3rd to 6th", "sqft": 158138, "sector": "AI", "submarket": "North of Oxford Street East"},
-    {"type": "letting", "date": "2026Q2", "occupier": "OpenAI", "building": "Jahn Court, 34 York Way, N1", "sqft": 77521, "sector": "AI"},
-    {"type": "letting", "date": "2026Q2", "occupier": "Humanoid", "building": "1 Triton Square, NW1", "sqft": 43500, "sector": "AI"},
-    {"type": "letting", "date": "2026Q2", "occupier": "Fractile AI", "building": "JJ Mack Building, EC1", "floors": "5th", "sqft": 21734, "rent_psf": 115.00, "sector": "AI", "submarket": "City Northern Fringe"},
-    {"type": "letting", "date": "2026Q2", "occupier": "Strategic Value Partners", "building": "Devonshire House, 1 Mayfair Place, W1", "floors": "part 2nd", "sqft": 8785, "rent_psf": 182.50, "submarket": "West End"},
-    {"type": "letting", "date": "2026Q1", "occupier": "Softbank", "building": "77 Grosvenor Street, W1", "floors": "1st", "rent_psf": 201.00, "submarket": "West End"},
-    {"type": "letting", "date": "2026H1", "occupier": "United Talent Agency / Curtis Brown", "building": "1 Rathbone Square, W1", "floors": "2nd and 3rd (assignment)", "sqft": 68000, "sector": "Creative"},
-    {"type": "letting", "date": "2026H1", "occupier": "Natixis", "building": "Thames Court, 1 Queenhithe, EC4", "floors": "G, 1st, 4th", "sqft": 88500, "sector": "Insurance & Financial"},
-    {"type": "letting", "date": "2026H1", "occupier": "NTT Finance", "building": "Fresh Wharf, 3 Lower Thames Street, EC3", "sqft": 58000, "sector": "Insurance & Financial"},
-    {"type": "letting", "date": "2026H1", "occupier": "Convene", "building": "1 Rathbone Square, W1", "sqft": 57000, "sector": "Serviced Office"},
-    {"type": "letting", "date": "2026H1", "occupier": "Landmark", "building": "1 Great St. Helens, EC3", "sqft": 50000, "sector": "Serviced Office"},
-    {"type": "letting", "date": "2026H1", "occupier": "Runway East", "sqft": 58000, "sector": "Serviced Office", "note": "Two deals combined"},
-    {"type": "completion", "date": "2026Q2", "building": "One Olympia, W14", "developer": "Yoo Capital and Hines", "sqft": 522321},
-    {"type": "completion", "date": "2026Q2", "building": "The M, 334 Oxford Street, W1", "developer": "Ramsbury", "sqft": 276715},
-    {"type": "completion", "date": "2026Q2", "building": "6 More London, SE1", "sqft": 147000},
-    {"type": "development_start", "date": "2026H1", "building": "Delta, Paddington", "developer": "TfL and Helical", "sqft": 234000, "note": "The only new-build start in H1 2026"},
-    {"type": "investment", "date": "2026Q2", "buyer": "Barclays", "building": "1 Churchill Place, E14", "value_gbp": 750000000, "note": "999-year long leasehold; 36% of Q2 investment turnover"}
+    {
+      "type": "letting",
+      "date": "2026Q2",
+      "occupier": "Anthropic",
+      "building": "1 Triton Square, NW1",
+      "floors": "3rd to 6th",
+      "sqft": 158138,
+      "sector": "AI",
+      "submarket": "North of Oxford Street East"
+    },
+    {
+      "type": "letting",
+      "date": "2026Q2",
+      "occupier": "OpenAI",
+      "building": "Jahn Court, 34 York Way, N1",
+      "sqft": 77521,
+      "sector": "AI"
+    },
+    {
+      "type": "letting",
+      "date": "2026Q2",
+      "occupier": "Humanoid",
+      "building": "1 Triton Square, NW1",
+      "sqft": 43500,
+      "sector": "AI"
+    },
+    {
+      "type": "letting",
+      "date": "2026Q2",
+      "occupier": "Fractile AI",
+      "building": "JJ Mack Building, EC1",
+      "floors": "5th",
+      "sqft": 21734,
+      "rent_psf": 115.0,
+      "sector": "AI",
+      "submarket": "City Northern Fringe"
+    },
+    {
+      "type": "letting",
+      "date": "2026Q2",
+      "occupier": "Strategic Value Partners",
+      "building": "Devonshire House, 1 Mayfair Place, W1",
+      "floors": "part 2nd",
+      "sqft": 8785,
+      "rent_psf": 182.5,
+      "submarket": "West End"
+    },
+    {
+      "type": "letting",
+      "date": "2026Q1",
+      "occupier": "Softbank",
+      "building": "77 Grosvenor Street, W1",
+      "floors": "1st",
+      "rent_psf": 201.0,
+      "submarket": "West End"
+    },
+    {
+      "type": "letting",
+      "date": "2026H1",
+      "occupier": "United Talent Agency / Curtis Brown",
+      "building": "1 Rathbone Square, W1",
+      "floors": "2nd and 3rd (assignment)",
+      "sqft": 68000,
+      "sector": "Creative"
+    },
+    {
+      "type": "letting",
+      "date": "2026H1",
+      "occupier": "Natixis",
+      "building": "Thames Court, 1 Queenhithe, EC4",
+      "floors": "G, 1st, 4th",
+      "sqft": 88500,
+      "sector": "Insurance & Financial"
+    },
+    {
+      "type": "letting",
+      "date": "2026H1",
+      "occupier": "NTT Finance",
+      "building": "Fresh Wharf, 3 Lower Thames Street, EC3",
+      "sqft": 58000,
+      "sector": "Insurance & Financial"
+    },
+    {
+      "type": "letting",
+      "date": "2026H1",
+      "occupier": "Convene",
+      "building": "1 Rathbone Square, W1",
+      "sqft": 57000,
+      "sector": "Serviced Office"
+    },
+    {
+      "type": "letting",
+      "date": "2026H1",
+      "occupier": "Landmark",
+      "building": "1 Great St. Helens, EC3",
+      "sqft": 50000,
+      "sector": "Serviced Office"
+    },
+    {
+      "type": "letting",
+      "date": "2026H1",
+      "occupier": "Runway East",
+      "sqft": 58000,
+      "sector": "Serviced Office",
+      "note": "Two deals combined"
+    },
+    {
+      "type": "completion",
+      "date": "2026Q2",
+      "building": "One Olympia, W14",
+      "developer": "Yoo Capital and Hines",
+      "sqft": 522321
+    },
+    {
+      "type": "completion",
+      "date": "2026Q2",
+      "building": "The M, 334 Oxford Street, W1",
+      "developer": "Ramsbury",
+      "sqft": 276715
+    },
+    {
+      "type": "completion",
+      "date": "2026Q2",
+      "building": "6 More London, SE1",
+      "sqft": 147000
+    },
+    {
+      "type": "development_start",
+      "date": "2026H1",
+      "building": "Delta, Paddington",
+      "developer": "TfL and Helical",
+      "sqft": 234000,
+      "note": "The only new-build start in H1 2026"
+    },
+    {
+      "type": "investment",
+      "date": "2026Q2",
+      "buyer": "Barclays",
+      "building": "1 Churchill Place, E14",
+      "value_gbp": 750000000,
+      "note": "999-year long leasehold; 36% of Q2 investment turnover"
+    }
   ]
 }

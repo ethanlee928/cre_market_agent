@@ -2,7 +2,13 @@
 #
 # They exist so the relevance lens has something to match against in a demo.
 # Every market figure in this application is real and sourced from Savills;
-# the holdings below are not. The app labels them as illustrative on screen.
+# the holdings below are not. That includes the passing rents, break dates and
+# EPC ratings — those are the inputs to the reversion arithmetic on the brief,
+# so the figures it computes are real arithmetic over invented rents. The app
+# labels the portfolio as illustrative on screen.
+#
+# In production this is Tier 3 data: the client's own rent roll, which is
+# exactly the input no market data vendor can obtain.
 #
 # Replace with your own assets, or delete every entry: the market-wide view
 # works completely with an empty watchlist.
@@ -15,13 +21,19 @@ assets:
     grade: "A"
     sqft: 145000
     lease_expiry: "2031-06"
-    note: "Core City tower, recently refurbished"
+    passing_rent_psf: 68.00
+    epc_rating: "B"
+    note: "Core City tower, recently refurbished. No break: the expiry is the
+      only date on the clock, and it falls outside the delivery window."
 
   - name: "Mayfair House"
     submarket: "Mayfair"
     grade: "B"
     sqft: 24000
-    lease_expiry: "2027-09"
+    lease_expiry: "2029-09"
+    break_date: "2027-09"
+    passing_rent_psf: 82.00
+    epc_rating: "D"
     note: "Secondary West End stock, refurbishment decision due"
 
   - name: "Clerkenwell Works"
@@ -29,4 +41,6 @@ assets:
     grade: "B"
     sqft: 38000
     lease_expiry: "2028-03"
+    passing_rent_psf: 52.00
+    epc_rating: "C"
     note: "Fringe location, exposed to elevated fringe vacancy"

@@ -29,6 +29,8 @@ from functools import total_ordering
 from pathlib import Path
 from typing import Callable, Iterable, Literal
 
+from .submarkets import SubmarketIndex
+
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
 DeltaKind = Literal["qoq", "yoy", "ytd", "vs_avg", "forecast"]
@@ -83,6 +85,13 @@ def _resolve_dated_field(key: str, fact_year: int) -> tuple[DeltaKind, str, str]
 EXTRA_FIELDS = {
     "transactions", "schemes", "prelet_pct", "not_started_pct",
     "absolute_sqft", "yoy_change_pct_note", "share_pct",
+    # Promoted out of a note string. Savills states it in prose -- "the sector
+    # is 41% of space currently under offer" -- and prose is not reachable by
+    # a detector. Parsing a number back out of a sentence at runtime is the
+    # thing this store exists to prevent, so the figure moves into data and
+    # the sentence stays for provenance. Same defect class as the sector rows
+    # in 716a779: published, transcribed, and unreadable by any code path.
+    "share_of_under_offer_pct",
 }
 
 CORE_FIELDS = {"metric", "submarket", "period", "value", "unit", "note", "sector"}
@@ -277,10 +286,16 @@ class AmbiguousQuery(LookupError):
 # --------------------------------------------------------------------------
 
 class Store:
-    def __init__(self, facts: list[Fact], events: list[dict], sources: list[Source]):
+    def __init__(self, facts: list[Fact], events: list[dict], sources: list[Source],
+                 index: "SubmarketIndex | None" = None):
         self.facts = facts
         self.events = events
         self.sources = sources
+        # The controlled vocabulary. Without it every submarket lookup is a
+        # string compare, so "Mayfair" misses a fact filed under "West End
+        # Core (Mayfair/St James's)" and the agent answers "I don't have that"
+        # about a figure sitting in the store.
+        self.index = index if index is not None else SubmarketIndex.load()
 
     # -- loading ----------------------------------------------------------
 
@@ -409,7 +424,7 @@ class Store:
         for f in self.facts:
             if metric and f.metric != metric:
                 continue
-            if submarket and f.submarket != submarket:
+            if submarket and not self._same_submarket(f.submarket, submarket):
                 continue
             if sector != "__any__" and f.sector != sector:
                 continue
@@ -425,6 +440,7 @@ class Store:
         submarket: str,
         period: str | Period | None = None,
         sector: str | None = None,
+        climb: bool = False,
     ) -> Fact | None:
         """One fact, or None.
 
@@ -432,7 +448,37 @@ class Store:
         silently returns the Tech & Media slice. Raises if still ambiguous.
         E-2: an exact-period miss falls back to the enclosing period.
         E-7: which tie-break applies depends on what was asked. See _rank.
+
+        climb=True walks up the submarket hierarchy when the exact node holds
+        nothing: ask for Paddington, get the West End figure. Sources publish
+        at coarse granularity, so the nearest ancestor is usually the honest
+        answer -- and the Fact carries its own submarket, so any sentence
+        built from it says which geography it is really describing.
+
+        Default False. Detectors ask about a named submarket and mean that
+        submarket; silently answering about its parent would invent a figure
+        the source never published for the place that was asked about.
         """
+        hit = self._get_at(metric, submarket, period, sector)
+        if hit is not None or not climb or self.index is None:
+            return hit
+        sid = self.index.resolve(submarket)
+        if sid is None:
+            return None
+        for ancestor in self.index.ancestors(sid)[1:]:
+            hit = self._get_at(metric, self.index.label(ancestor), period, sector)
+            if hit is not None:
+                return hit
+        return None
+
+    def _get_at(
+        self,
+        metric: str,
+        submarket: str,
+        period: str | Period | None = None,
+        sector: str | None = None,
+    ) -> Fact | None:
+        """One fact at exactly this node. The body get() always had."""
         exact = self.find(metric, submarket, period, sector)
         if len(exact) == 1:
             return exact[0]
@@ -447,6 +493,28 @@ class Store:
                 f"Pass period= or sector= to disambiguate."
             )
         return None
+
+    def _same_submarket(self, fact_submarket: str, query: str) -> bool:
+        """Same node, reached through the vocabulary rather than by spelling.
+
+        Falls back to a plain string compare when either name is outside
+        submarkets.yaml, so an unrecognised submarket behaves exactly as it
+        did before this method existed.
+        """
+        if fact_submarket == query:
+            return True
+        if self.index is None:
+            return False
+        return self.index.same_node(fact_submarket, query)
+
+    def resolve_submarket(self, name: str) -> str | None:
+        """Canonical id for a submarket name, or None if it is not vocabulary.
+
+        Lets a caller tell "I have never heard of Basingstoke" apart from
+        "Canary Wharf is a real submarket and this source publishes nothing
+        for it". The second is a correct answer; the first is a typo.
+        """
+        return self.index.resolve(name) if self.index else None
 
     @staticmethod
     def _rank(period) -> Callable[[Fact], tuple]:
@@ -514,10 +582,35 @@ class Store:
         out = [e for e in self.events
                if (not type or e.get("type") == type)
                and (not sector or e.get("sector") == sector)
-               and (not submarket or e.get("submarket") == submarket)
+               and (not submarket or self._event_in(e, submarket))
                and (not min_sqft or (e.get("sqft") or 0) >= min_sqft)]
         out.sort(key=lambda e: e.get("sqft") or 0, reverse=True)
         return out[:limit]
+
+    def _event_in(self, e: dict, query: str) -> bool:
+        """Is this event inside the queried submarket?
+
+        Downward, unlike facts. Anthropic's 158,138 sq ft at 1 Triton Square
+        is filed under North of Oxford Street East, which submarkets.yaml
+        declares a child of the West End -- so a West End question must reach
+        it. Comparing the two strings directly, as this did, dropped the
+        largest letting in the report from its own submarket's answer.
+
+        An event with no submarket never matches a submarket filter. 13 of the
+        17 in this seed have none, which is why callers should report
+        events_missing_submarket() alongside a filtered count rather than let
+        the absence pass silently.
+        """
+        es = e.get("submarket")
+        if not es:
+            return False
+        if es == query:
+            return True
+        return self.index is not None and self.index.covers(es, query)
+
+    def events_missing_submarket(self) -> int:
+        """How many events the source files without a submarket."""
+        return sum(1 for e in self.events if not e.get("submarket"))
 
     def event_types(self) -> list[str]:
         return sorted({e["type"] for e in self.events if "type" in e})
@@ -527,6 +620,15 @@ class Store:
 
     def metrics(self) -> list[str]:
         return sorted({f.metric for f in self.facts})
+
+    def sectors(self) -> list[str]:
+        """Sectors the store can actually answer for.
+
+        Advertising a sector the agent cannot then fetch is worse than not
+        advertising it: the model asks, gets the undifferentiated total, and
+        reports it as the sector figure.
+        """
+        return sorted({f.sector for f in self.facts if f.sector})
 
     def newest_source(self) -> Source:
         """The most recently published source backing this store."""

@@ -245,7 +245,10 @@ def test_shipped_seed_is_unchanged():
     a = store.get("grade_a_rent_avg", "City")
     assert a.value == 76.21 and a.delta("yoy").render() == "+7.0%"
     sigs = detect_all(store, Watchlist.load())
-    assert len(sigs) == 4
+    # 4 -> 5 is deliberate: sector_demand joins the sector take-up breakdown to
+    # the under-offer total, a comparison the source never states. See
+    # test_sector_demand.py.
+    assert len(sigs) == 5
     assert "in 2026" in [s for s in sigs if s.id.startswith("supply")][0].detail
 
 

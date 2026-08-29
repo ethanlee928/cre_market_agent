@@ -48,6 +48,17 @@ HARD RULES ON NUMBERS. These are the product.
 4. Figures from web search are live and less certain than the fact store. Label
    them as coming from a web search, and never present them as store figures.
 
+DECISIONS. Close on one of: regear, refurbish, re-price, hold, defer capex,
+start the conversation. Never close with "monitor" or "keep an eye on it" --
+those let a paragraph end without deciding anything, which is the failure this
+tool exists to prevent. "Hold" is a real answer when you say why.
+
+When get_signals already gives you why_each_asset and recommended_action for a
+building, use those figures and that verb as they stand. They were computed in
+Python from the fact store and they are what the brief on screen already says.
+Recomputing or rephrasing them produces a second, different number for the same
+thing, in front of a reader who can see both.
+
 STYLE. You are talking to a busy professional who will repeat what you say in a
 client meeting. Lead with the number and what it means. Be concise. No preamble,
 no "great question", no bullet-point dumps unless asked. Two or three sentences
@@ -78,13 +89,15 @@ def _declarations() -> list[types.FunctionDeclaration]:
                 "metric": S(type=T.STRING, description="e.g. vacancy_rate, prime_rent, grade_a_rent_avg, take_up, completions_forecast"),
                 "submarket": S(type=T.STRING, description="e.g. City, West End, City Core, City Fringe, Central London"),
                 "period": S(type=T.STRING, description="Optional, e.g. 2026Q2 or 2026H1. Omit for the latest."),
+                "sector": S(type=T.STRING, description="Optional. Exactly one of the names list_available returns under 'sectors', e.g. 'Tech & Media'. Omit for the all-sector total. Never invent a sector name."),
             }, required=["metric", "submarket"]),
         ),
         types.FunctionDeclaration(
             name="list_available",
             description=(
-                "List every metric name and submarket name the fact store holds. "
-                "Call this first if unsure whether a figure exists."
+                "Every metric, submarket, sector and event type the store holds. "
+                "Call this first if unsure whether a figure exists. A sector listed "
+                "here can be passed to get_metric."
             ),
             parameters=S(type=T.OBJECT, properties={}),
         ),
@@ -107,12 +120,16 @@ def _declarations() -> list[types.FunctionDeclaration]:
             parameters=S(type=T.OBJECT, properties={
                 "type": S(type=T.STRING, description="letting, completion, development_start or investment. Omit for all."),
                 "sector": S(type=T.STRING, description="e.g. AI, Creative, Insurance & Financial, Serviced Office"),
+                "submarket": S(type=T.STRING, description="e.g. West End, City, Mayfair. Matches deals anywhere inside it. Most events carry no submarket in this source, so a filtered count is a floor, not a total."),
                 "min_sqft": S(type=T.INTEGER, description="Only deals at least this large"),
             }),
         ),
         types.FunctionDeclaration(
             name="get_watchlist",
-            description="The user's own assets: submarket, grade, size, lease expiry.",
+            description=("The user's own assets: submarket, grade, size, lease "
+                         "expiry, break date, passing rent and EPC rating. The "
+                         "holdings are illustrative and labelled fictional; the "
+                         "market figures they are compared against are not."),
             parameters=S(type=T.OBJECT, properties={}),
         ),
     ]
@@ -144,15 +161,26 @@ class Agent:
     def _run_tool(self, name: str, args: dict) -> dict:
         try:
             if name == "get_metric":
-                f = self.store.get(args["metric"], args["submarket"], args.get("period"))
+                asked = args["submarket"]
+                f = self.store.get(args["metric"], asked, args.get("period"),
+                                   sector=args.get("sector"), climb=True)
                 if not f:
+                    # A typo and a real data gap need different answers. Only
+                    # the second one is a correct "I don't have that".
+                    if self.store.resolve_submarket(asked) is None:
+                        return {"found": False,
+                                "message": f"{asked!r} is not a submarket in this "
+                                           f"vocabulary. Call list_available."}
                     return {"found": False,
-                            "message": f"No fact for {args['metric']} in {args['submarket']}. "
-                                       f"Call list_available to see what exists."}
+                            "message": f"{asked} is a recognised submarket, but this "
+                                       f"source publishes no {args['metric']} for it "
+                                       f"or for any submarket containing it."}
                 out = {
                     "found": True,
                     "metric": f.metric,
                     "submarket": f.submarket,
+                    "asked_about": asked,
+                    "sector": f.sector or "all sectors",
                     "period": str(f.period),
                     "value": f.render_value(),
                     "value_is_published": f.value is not None,
@@ -165,28 +193,47 @@ class Agent:
                         out[label] = d.render()
                 if f.note:
                     out["note"] = f.note
+                if not self.store._same_submarket(f.submarket, asked):
+                    out["broader_geography"] = (
+                        f"This source does not break out {asked}. The figure "
+                        f"above is for {f.submarket}, which contains it. Say so.")
                 return out
 
             if name == "list_available":
                 return {"metrics": self.store.metrics(),
                         "submarkets": self.store.submarkets(),
                         "event_types": self.store.event_types(),
-                        "sectors": sorted({f.sector for f in self.store.facts
-                                           if f.sector}),
+                        "sectors": self.store.sectors(),
                         "as_of": self.store.as_of()}
 
             if name == "find_market_activity":
-                hits = self.store.find_events(
-                    **{k: v for k, v in args.items() if v not in (None, "")})
-                return {"count": len(hits),
-                        "events": [{k: v for k, v in e.items() if k != "_source"}
-                                   | {"source": e["_source"].cite()}
-                                   for e in hits]}
+                clean = {k: v for k, v in args.items() if v not in (None, "")}
+                hits = self.store.find_events(**clean)
+                out = {"count": len(hits),
+                       "events": [{k: v for k, v in e.items() if k != "_source"}
+                                  | {"source": e["_source"].cite()}
+                                  for e in hits]}
+                if clean.get("submarket"):
+                    # Silence here is the bug: 13 of 17 events carry no
+                    # submarket, so a filtered list that does not say so reads
+                    # as complete when it is a floor.
+                    missing = self.store.events_missing_submarket()
+                    if missing:
+                        out["coverage_caveat"] = (
+                            f"{missing} of {len(self.store.events)} events in this "
+                            f"source carry no submarket, so they cannot match any "
+                            f"submarket filter. State this limitation with the answer.")
+                return out
 
             if name == "get_signals":
                 return {"signals": [
                     {"severity": s.severity, "headline": s.headline,
                      "detail": s.detail, "affects_your_assets": s.affected,
+                     # Already computed, already sourced, already carrying the
+                     # decision verb. Restating either differently is the one
+                     # way this loop can contradict the page above it.
+                     "why_each_asset": s.match_reasons,
+                     "recommended_action": s.match_actions,
                      "sources": s.citations()}
                     for s in detect_all(self.store, self.watchlist)
                 ]}
@@ -194,9 +241,13 @@ class Agent:
             if name == "get_watchlist":
                 return {"label": self.watchlist.label,
                         "count": len(self.watchlist),
+                        "fictional": True,
                         "assets": [{"name": a.name, "submarket": a.submarket,
                                     "grade": a.grade, "sqft": a.sqft,
-                                    "lease_expiry": a.lease_expiry}
+                                    "lease_expiry": a.lease_expiry,
+                                    "break_date": a.break_date,
+                                    "passing_rent_psf": a.passing_rent_psf,
+                                    "epc_rating": a.epc_rating}
                                    for a in self.watchlist.assets]}
 
             return {"error": f"unknown tool {name}"}

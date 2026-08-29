@@ -107,8 +107,18 @@ with st.chat_message("assistant"):
         with st.expander(f"{BADGE[s.severity]}  **{s.headline}**",
                          expanded=(s.severity == "RISK" and bool(s.affected))):
             st.markdown(s.detail)
-            if s.affected:
-                st.markdown("**Your exposure:** " + ", ".join(f"`{a}`" for a in s.affected))
+            for name in s.affected:
+                reason = s.match_reasons.get(name)
+                action = s.match_actions.get(name)
+                if reason:
+                    # The decision verb is rendered here, from Python, because
+                    # this page is the no-API-key path: a model-authored verb
+                    # would leave the headline feature blank for a reader
+                    # running without a key.
+                    st.markdown(f"**{name}** — {reason}"
+                                + (f"  \n→ **{action}**" if action else ""))
+                else:
+                    st.markdown(f"**Your exposure:** `{name}`")
             for c in s.citations():
                 st.caption(f"Source: {c}")
 

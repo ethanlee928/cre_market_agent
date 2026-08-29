@@ -57,12 +57,12 @@ available, which is also why they are identical on every run.
 
 On load, a briefing with four ranked signals:
 
-| | Signal |
-|---|---|
-| 🔴 RISK | City Grade B rents falling while Grade A rises (−2.6% against +7.0%) |
-| 🔴 RISK | West End Grade B rents falling while Grade A rises (−11.3% against +4.0%) |
-| 🟠 WATCH | Record 7,700,000 sq ft of completions in 2026, only 35% pre-let |
-| 🟢 OPPORTUNITY | 41 large requirements chasing 21 available options (2.0:1) |
+|                | Signal                                                                    |
+| -------------- | ------------------------------------------------------------------------- |
+| 🔴 RISK        | City Grade B rents falling while Grade A rises (−2.6% against +7.0%)      |
+| 🔴 RISK        | West End Grade B rents falling while Grade A rises (−11.3% against +4.0%) |
+| 🟠 WATCH       | Record 7,700,000 sq ft of completions in 2026, only 35% pre-let           |
+| 🟢 OPPORTUNITY | 41 large requirements chasing 21 available options (2.0:1)                |
 
 The sidebar shows an illustrative three-asset portfolio, each tagged with the worst
 signal touching it. Signals that hit your holdings sort to the top and expand by default.
@@ -72,7 +72,7 @@ Then ask it something:
 > **Should we be worried about the City Fringe?**
 >
 > Yes, particularly for secondary assets. City Fringe vacancy stands at 8.0%, which is
-> 150 bps above its long-run average *(Savills, Q2 2026, as of 2026-08-06)*. This directly
+> 150 bps above its long-run average _(Savills, Q2 2026, as of 2026-08-06)_. This directly
 > impacts your asset, Clerkenwell Works (38,000 sq ft, Grade B, lease expiry March 2028)...
 
 Or ask who is actually active:
@@ -81,10 +81,81 @@ Or ask who is actually active:
 >
 > Anthropic took 158,138 sq ft at 1 Triton Square, NW1, OpenAI acquired 77,521 sq ft
 > at Jahn Court, 34 York Way, N1, and Fractile AI signed for 21,734 sq ft at the
-> JJ Mack Building, EC1 at £115.00 psf *(Savills, Q2 2026)*...
+> JJ Mack Building, EC1 at £115.00 psf _(Savills, Q2 2026)_...
 
 Expand the tool-call panel above any answer to see exactly which figures the agent
 looked up. Every number it states comes from a tool call, never from memory.
+
+---
+
+## North stars
+
+Three analyst workflows the system is built to serve, written as acceptance tests.
+Each query has an expected result, and **a refusal counts as a pass** wherever the
+data genuinely does not exist. An unsourced answer is the only real failure.
+
+Goal 3 leads: it is the only one whose conclusion is not already stated in the
+source, so it is the one that proves this is not a PDF summariser.
+
+|     | Meaning                                                     |
+| --- | ----------------------------------------------------------- |
+| ✅  | Answers with sourced figures                                |
+| ◐   | Answers, with a stated limitation                           |
+| ⚠️  | Known defect — answers, but wrongly                         |
+| ⛔  | No data. "I don't have that" is the correct, passing answer |
+
+### 1. Morning briefing — macro and event intelligence
+
+_Catch overnight moves and named deals before a client or IC meeting._
+
+| Test query                                                                      | Today                                                                                                                                                                                                                   |
+| ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Which occupiers signed over 30,000 sq ft?"                                     | ✅ Nine lettings, largest first, each cited                                                                                                                                                                             |
+| "…in the City Core or West End specifically"                                    | ◐ Anthropic's 158,138 sq ft now surfaces: `find_market_activity` takes a `submarket`, and matching walks the hierarchy, so a West End question reaches a deal filed under North of Oxford Street East. 13 of 17 events carry no submarket in the source, so the answer states that the count is a floor |
+| "Flag Bank Rate, gilt yields, rate shifts"                                      | ⛔ No macro data, no `macro_context` tool. Should refuse; today it may answer freehand from Search grounding without labelling the figure as live                                                                       |
+| "…this week"                                                                    | ⛔ Source is quarterly, published 2026-08-06. Not answerable from the store at any granularity                                                                                                                          |
+| "New planning applications over 100,000 sq ft, with developers and ESG targets" | ⛔ No planning-stage data. `development_starts` is construction stage, downstream of planning                                                                                                                           |
+
+### 2. Pre-underwriting — micro-market divergence
+
+_Compare submarket benchmarks without reading a 50-page PDF._
+
+| Test query                                                         | Today                                                                                                                                                                                                  |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| "City Core versus West End Core vacancy"                           | ✅ 5.9% and 4.4%, both against their 10-year averages                                                                                                                                                  |
+| "Compare Canary Wharf, City Core and Mayfair/St James's"           | ◐ `Mayfair` now resolves — 4.4%, and the answer names the node it came from. Canary Wharf still holds **zero facts**, but it resolves as a real submarket, so the reply is the Central London figure explicitly labelled as broader geography rather than a bare "I don't have that" |
+| "Pre-let pipeline ratios by submarket"                             | ◐ `prelet_pct` exists only at Central London level — 35% forecast, 25% under construction, 18% to 2029. No submarket breakdown published                                                               |
+| "Southbank comps, rent-free months, headline versus net effective" | ⛔ Southbank holds zero facts. Rent-free incentives and net effective rent are not metrics in this source, and net effective is not derivable without them                                             |
+
+### 3. Tenant risk and sector demand — occupier signals
+
+_Target leasing campaigns, read corporate footprint changes._
+
+The richest data in the store, and currently the least reachable.
+
+| Test query                                              | Today                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Which sectors are expanding?"                          | ✅ Financial \& Banking 5.8m sq ft (+30% YTD), Professional Services 3.58m (+23%), Tech \& Media 3.1m (+26%) — all records, each cited. `get_metric` takes a `sector`, and `list_available` advertises only names it can actually fetch                                                                                     |
+| "Are occupiers growing or shrinking?"                   | ◐ `expanding_occupier_share` is reachable — 43% expanding against 12% contracting, 15% new entrants — but no detector surfaces it on the brief                                                                                                                                                                                      |
+| "Which sector should we target for a leasing campaign?" | ✅ `sector_demand` computes it and it leads the answer: Insurance \& Financial take-up at 878,112 sq ft, −21% on the five-year average and the weakest in the series, while the sector holds **41% of space under offer against 20% of take-up** — twice its completed weight. Trailing and leading disagree; the leading number is the one that has not happened yet |
+| "Will our tenant renew?"                                | ⛔ No tenant-level data, and prediction is out of scope for a sourced system. The honest answer is the market base rate: 1.4m sq ft of the 3.1m sq ft under offer is regear, 93% of it from occupiers already in 50,000 sq ft or more                                                                                               |
+
+Goal 3 closed with two of the three things planned, and deliberately without the
+third. `get_metric` took a `sector` parameter, and `sector_demand` now fires on
+trailing take-up disagreeing with the leading pipeline.
+
+The sector vocabulary was dropped on purpose. Joining `Insurance & Financial` to
+`Financial & Banking` would have asserted that two Savills groupings are the same
+sector, and insurance is not banking — the source uses different cuts in different
+tables and never claims they are equivalent. The stronger signal needs no such
+inference: it compares one sector against *itself*, take-up versus space under
+offer, which is a comparison the source fully supports and never draws.
+
+One figure had to move to make it computable. "41% of space currently under offer"
+lived inside a note string, and a detector parsing prose for a number is the exact
+defect this store exists to prevent. It is now `share_of_under_offer_pct` in the
+fact's `extras`, declared in `EXTRA_FIELDS`, with the original sentence kept for
+provenance. Same defect class as the sector rows that were unreachable before.
 
 ---
 
@@ -120,15 +191,15 @@ subtracting two figures from different years.
 
 ## Troubleshooting
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| `command not found: uv` | `uv` not installed | `curl -LsSf https://astral.sh/uv/install.sh \| sh`, then reopen the terminal |
-| Sidebar says "No `GOOGLE_API_KEY`" | `.env` missing or key blank | `cp .env.example .env` and paste your key |
-| "Your Google API key was rejected" | Bad or revoked key | Generate a new one at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
-| "Gemini rate limit reached" | Free-tier quota | Wait a minute. The briefing keeps working, it needs no API |
-| "That model is not available on your key" | `CRE_MODEL` unavailable | Run `probe_models.py`, then set `CRE_MODEL` in `.env` |
-| Blank page on first load | Browser opened before the server was ready | Reload the page |
-| Port 8501 already in use | Another Streamlit running | `uv run streamlit run app.py --server.port 8502` |
+| Symptom                                   | Cause                                      | Fix                                                                                    |
+| ----------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `command not found: uv`                   | `uv` not installed                         | `curl -LsSf https://astral.sh/uv/install.sh \| sh`, then reopen the terminal           |
+| Sidebar says "No `GOOGLE_API_KEY`"        | `.env` missing or key blank                | `cp .env.example .env` and paste your key                                              |
+| "Your Google API key was rejected"        | Bad or revoked key                         | Generate a new one at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| "Gemini rate limit reached"               | Free-tier quota                            | Wait a minute. The briefing keeps working, it needs no API                             |
+| "That model is not available on your key" | `CRE_MODEL` unavailable                    | Run `probe_models.py`, then set `CRE_MODEL` in `.env`                                  |
+| Blank page on first load                  | Browser opened before the server was ready | Reload the page                                                                        |
+| Port 8501 already in use                  | Another Streamlit running                  | `uv run streamlit run app.py --server.port 8502`                                       |
 
 ---
 
@@ -136,11 +207,11 @@ subtracting two figures from different years.
 
 All in `.env`:
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `GOOGLE_API_KEY` | *(none)* | Required for chat. The briefing works without it |
-| `CRE_MODEL` | `gemini-3.7-flash` | Swap models without touching code |
-| `CRE_THINKING` | `medium` | `low`, `medium` or `high`. Lower is faster and cheaper |
+| Variable         | Default            | Purpose                                                |
+| ---------------- | ------------------ | ------------------------------------------------------ |
+| `GOOGLE_API_KEY` | _(none)_           | Required for chat. The briefing works without it       |
+| `CRE_MODEL`      | `gemini-3.7-flash` | Swap models without touching code                      |
+| `CRE_THINKING`   | `medium`           | `low`, `medium` or `high`. Lower is faster and cheaper |
 
 Your portfolio lives in `config/watchlist.yaml`. Edit it, or delete every asset:
 the market-wide view works completely with an empty watchlist.
@@ -190,8 +261,10 @@ stored figures, because they carry different confidence.
 **Provenance, stated plainly:** savills.co.uk returns HTTP 403 to ordinary HTTP
 clients, so the article was read in a browser and the figures transcribed by hand
 into `data/seed_2026Q2.json`. There is no scraper to inspect. On 29 August 2026 all
-70 records — 47 facts, 6 sector rows, 17 named transactions — were re-read against
-the source; no discrepancies were found. One field is an inference rather than a
+70 source records — 47 facts, 6 sector rows, 17 named transactions — were re-read
+against the source; no discrepancies were found. Those 70 load as 53 Facts and 17
+events, which is the count the sidebar reports: the 6 sector rows normalise into
+ordinary Facts rather than a parallel model. One field is an inference rather than a
 quote: Anthropic's letting at 1 Triton Square is tagged to the North of Oxford
 Street East submarket, which is correct but is not stated in the article.
 

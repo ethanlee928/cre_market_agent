@@ -45,25 +45,8 @@ the comment in `pyproject.toml`.
 ## Data
 
 `data/seed_2026Q2.json` — Savills Central London Office Market Watch Q2 2026,
-published 2026-08-06. 47 facts, 17 events, 6 sector rows. Real, harvested, cited.
+published 2026-08-06. 70 source records — 47 facts, 6 sector rows, 17 events —
+which load as 53 Facts and 17 events (sector rows normalise into Facts; a Fact
+treats `sector` as part of its identity). Real, harvested, cited.
 `savills.co.uk` returns 403 to generic HTTP clients, which is why retrieval goes
 through Gemini Search grounding rather than `httpx`.
-
-## Skill routing
-
-When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
-
-Key routing rules:
-- Product ideas/brainstorming → invoke /office-hours
-- Strategy/scope → invoke /plan-ceo-review
-- Architecture → invoke /plan-eng-review
-- Design system/plan review → invoke /design-consultation or /plan-design-review
-- Full review pipeline → invoke /autoplan
-- Bugs/errors → invoke /investigate
-- QA/testing site behavior → invoke /qa or /qa-only
-- Code review/diff check → invoke /review
-- Visual polish → invoke /design-review
-- Ship/deploy/PR → invoke /ship or /land-and-deploy
-- Save progress → invoke /context-save
-- Resume context → invoke /context-restore
-- Author a backlog-ready spec/issue → invoke /spec
