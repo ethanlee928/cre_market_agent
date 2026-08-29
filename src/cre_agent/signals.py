@@ -57,10 +57,12 @@ def quality_spread(store: Store, watchlist=None) -> list[Signal]:
     """
     out = []
     for sub in ("City", "West End"):
-        a = store.get("grade_a_rent_avg", sub)
-        b = store.get("grade_b_rent_avg", sub)
-        if not a or not b:
+        # get_pair, not two get() calls: differencing a 2027 Grade A against a
+        # 2026 Grade B would invent a spread no source published (E-8).
+        pair = store.get_pair("grade_a_rent_avg", "grade_b_rent_avg", sub)
+        if not pair:
             continue
+        a, b = pair
         da, db = a.delta("yoy"), b.delta("yoy")
         if da is None or db is None:
             continue
@@ -77,9 +79,10 @@ def quality_spread(store: Store, watchlist=None) -> list[Signal]:
                      f"({db.render()} against {da.render()})",
             detail=(
                 f"The quality gap in the {sub} widened to {spread:.1f} points over the "
-                f"year. Grade A now averages {a.render_value()} ({da.render()}), while "
-                f"Grade B is at {b_level} ({db.render()}). Secondary stock needs capital "
-                f"to compete, and the gap is forecast to keep widening."
+                f"year to {a.period}. Grade A averages {a.render_value()} "
+                f"({da.render()}), while Grade B is at {b_level} ({db.render()}). "
+                f"Secondary stock needs capital to compete, and the gap is forecast "
+                f"to keep widening."
             ),
             evidence=[a, b],
             affected=_match(watchlist, submarket=sub, grade="B"),
@@ -99,23 +102,28 @@ def supply_shock(store: Store, watchlist=None) -> list[Signal]:
     if prelet is None or prelet >= 60:
         return []
 
+    # The forecast year comes off the fact, never a literal. A 2027 seed used to
+    # print "in 2026" because the year was baked into this string.
     detail = (
-        f"Central London completions are on course for {f.render_value()} in 2026"
+        f"Central London completions are on course for {f.render_value()} in {f.period}"
         + (f", {vs_avg.render()} against the 10-year average" if vs_avg else "")
         + f", and only {prelet:.0f}% of it is pre-let. "
     )
     if uc:
         uc_prelet = uc.extras.get("prelet_pct")
+        # Under construction is measured at its own period, which need not be
+        # the forecast year. Say which, rather than implying they are the same.
         detail += (
-            f"A further {uc.render_value()} is under construction with "
-            f"{uc_prelet:.0f}% pre-let. "
+            f"A further {uc.render_value()} was under construction at {uc.period} "
+            f"with {uc_prelet:.0f}% pre-let. "
         )
     detail += "New Grade A space arriving unlet puts pressure on headline rents and incentives."
 
     return [Signal(
         id="supply_shock:Central London",
         severity=WATCH,
-        headline=f"Record {f.render_value()} of completions in 2026, only {prelet:.0f}% pre-let",
+        headline=f"Record {f.render_value()} of completions in {f.period}, "
+                 f"only {prelet:.0f}% pre-let",
         detail=detail,
         evidence=[x for x in (f, uc) if x],
         affected=_match(watchlist, submarket=None),
@@ -124,24 +132,31 @@ def supply_shock(store: Store, watchlist=None) -> list[Signal]:
 
 def large_occupier_squeeze(store: Store, watchlist=None) -> list[Signal]:
     """More big requirements chasing large floorplates than there are options."""
-    opts = store.get("large_grade_a_options", "Central London")
-    reqs = store.get("large_active_requirements", "Central London")
+    # Same-period pair (E-8): a ratio built from this year's requirements over
+    # last year's options is not an imbalance anyone published.
+    pair = store.get_pair("large_active_requirements", "large_grade_a_options",
+                          "Central London")
+    if not pair:
+        return []
+    reqs, opts = pair
     demand = store.get("active_demand", "Central London")
-    if not opts or not reqs or opts.value is None or reqs.value is None:
+    if opts.value is None or reqs.value is None or opts.value == 0:
         return []
     if reqs.value <= opts.value:
         return []
 
     ratio = reqs.value / opts.value
     detail = (
-        f"There are {reqs.value:.0f} live requirements over 100,000 sq ft chasing only "
-        f"{opts.value:.0f} available Grade A options, a {ratio:.1f} to 1 imbalance. "
-        f"{opts.note or ''} "
+        f"At {opts.period} there are {reqs.value:.0f} live requirements over 100,000 "
+        f"sq ft chasing only {opts.value:.0f} available Grade A options, a "
+        f"{ratio:.1f} to 1 imbalance. {opts.note or ''} "
     )
     if demand:
         d = demand.delta("vs_avg")
+        # Demand is published at its own period; name it rather than folding it
+        # into the sentence above and implying one measurement date.
         detail += (
-            f"Overall active demand stands at {demand.render_value()}"
+            f"Active demand at {demand.period} stands at {demand.render_value()}"
             + (f", {d.render()} on the long-run average" if d else "")
             + ". Landlords of large, central, best-in-class space have pricing power."
         )

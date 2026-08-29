@@ -112,7 +112,10 @@ with st.chat_message("assistant"):
             for c in s.citations():
                 st.caption(f"Source: {c}")
 
-    st.caption(f"Savills Central London Office Market Watch · as of {store.as_of()} · "
+    # Attribution comes off the newest loaded source, not a literal. With a
+    # second quarter merged in, a hardcoded title credits the wrong report.
+    newest = store.newest_source()
+    st.caption(f"{newest.publisher} {newest.title} · as of {store.as_of()} · "
                f"all figures computed from the fact store, none generated")
 
 
@@ -134,14 +137,16 @@ for m in st.session_state.messages:
 # not yet know what this thing can answer.
 if not st.session_state.messages and agent.enabled:
     st.caption("Try:")
-    cols = st.columns(3)
+    # Two rows of two. Four across is unreadable in a centred layout.
     seeds = ["Should we be worried about the City Fringe?",
+             "Who's taking space right now?",
              "What's driving demand right now?",
              "What should I do about Mayfair House?"]
-    for col, q in zip(cols, seeds):
-        if col.button(q, use_container_width=True):
-            st.session_state.pending = q
-            st.rerun()
+    for i in range(0, len(seeds), 2):
+        for col, q in zip(st.columns(2), seeds[i:i + 2]):
+            if col.button(q, use_container_width=True):
+                st.session_state.pending = q
+                st.rerun()
 
 prompt = st.chat_input("Ask anything about the London office market...",
                        disabled=not agent.enabled)

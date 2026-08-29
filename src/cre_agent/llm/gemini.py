@@ -97,6 +97,20 @@ def _declarations() -> list[types.FunctionDeclaration]:
             parameters=S(type=T.OBJECT, properties={}),
         ),
         types.FunctionDeclaration(
+            name="find_market_activity",
+            description=(
+                "Named transactions and events from the Savills report: who "
+                "took space, what completed, what broke ground, what sold. "
+                "Use this whenever the user asks who is active, who is "
+                "moving, what deals happened, or asks for concrete examples."
+            ),
+            parameters=S(type=T.OBJECT, properties={
+                "type": S(type=T.STRING, description="letting, completion, development_start or investment. Omit for all."),
+                "sector": S(type=T.STRING, description="e.g. AI, Creative, Insurance & Financial, Serviced Office"),
+                "min_sqft": S(type=T.INTEGER, description="Only deals at least this large"),
+            }),
+        ),
+        types.FunctionDeclaration(
             name="get_watchlist",
             description="The user's own assets: submarket, grade, size, lease expiry.",
             parameters=S(type=T.OBJECT, properties={}),
@@ -156,7 +170,18 @@ class Agent:
             if name == "list_available":
                 return {"metrics": self.store.metrics(),
                         "submarkets": self.store.submarkets(),
+                        "event_types": self.store.event_types(),
+                        "sectors": sorted({f.sector for f in self.store.facts
+                                           if f.sector}),
                         "as_of": self.store.as_of()}
+
+            if name == "find_market_activity":
+                hits = self.store.find_events(
+                    **{k: v for k, v in args.items() if v not in (None, "")})
+                return {"count": len(hits),
+                        "events": [{k: v for k, v in e.items() if k != "_source"}
+                                   | {"source": e["_source"].cite()}
+                                   for e in hits]}
 
             if name == "get_signals":
                 return {"signals": [

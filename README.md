@@ -75,7 +75,15 @@ Then ask it something:
 > 150 bps above its long-run average *(Savills, Q2 2026, as of 2026-08-06)*. This directly
 > impacts your asset, Clerkenwell Works (38,000 sq ft, Grade B, lease expiry March 2028)...
 
-Expand **"12 tool calls"** above any answer to see exactly which figures the agent
+Or ask who is actually active:
+
+> **Who's taking space right now?**
+>
+> Anthropic took 158,138 sq ft at 1 Triton Square, NW1, OpenAI acquired 77,521 sq ft
+> at Jahn Court, 34 York Way, N1, and Fractile AI signed for 21,734 sq ft at the
+> JJ Mack Building, EC1 at £115.00 psf *(Savills, Q2 2026)*...
+
+Expand the tool-call panel above any answer to see exactly which figures the agent
 looked up. Every number it states comes from a tool call, never from memory.
 
 ---
@@ -97,6 +105,16 @@ uv run python scripts/smoke_test.py
 
 Four checks: plain generation, function calling, Search grounding, and the two combined
 in a single request. All four should pass.
+
+```bash
+uv run python tests/test_time_axis.py
+```
+
+19 tests over the store and detectors. Needs no API key, no network and no test
+runner — it is a plain script, so there is nothing to install. Most of these
+guard failures that only appear once a second quarter is merged: periods sorting
+by their string name, a metric changing grain between reports, a detector
+subtracting two figures from different years.
 
 ---
 
@@ -142,10 +160,12 @@ the market-wide view works completely with an empty watchlist.
 │   ├── watchlist.yaml          your assets (three fictional ones ship by default)
 │   └── submarkets.yaml         controlled vocabulary so "Mayfair" resolves to "West End"
 ├── data/
-│   └── seed_2026Q2.json        47 facts, 17 events, all Savills-sourced
-└── scripts/
-    ├── probe_models.py         which models does this key see?
-    └── smoke_test.py           four API checks
+│   └── seed_2026Q2.json        53 facts, 17 events, all Savills-sourced
+├── scripts/
+│   ├── probe_models.py         which models does this key see?
+│   └── smoke_test.py           four API checks
+└── tests/
+    └── test_time_axis.py       19 tests, no pytest needed
 ```
 
 **The design rule:** `store.py` is the only module that touches raw data. Detectors and
@@ -167,6 +187,14 @@ Every market number is real; no holdings are.
 Live web results come from Google Search grounding and are labelled separately from
 stored figures, because they carry different confidence.
 
+**Provenance, stated plainly:** savills.co.uk returns HTTP 403 to ordinary HTTP
+clients, so the article was read in a browser and the figures transcribed by hand
+into `data/seed_2026Q2.json`. There is no scraper to inspect. On 29 August 2026 all
+70 records — 47 facts, 6 sector rows, 17 named transactions — were re-read against
+the source; no discrepancies were found. One field is an inference rather than a
+quote: Anthropic's letting at 1 Triton Square is tagged to the North of Oxford
+Street East submarket, which is correct but is not stated in the article.
+
 In production this dataset would come from a licensed feed rather than a published report.
 
 ---
@@ -175,7 +203,11 @@ In production this dataset would come from a licensed feed rather than a publish
 
 Stated plainly rather than discovered:
 
-- No automated data ingestion. The quarterly dataset was harvested once, by hand.
+- No automated data ingestion. The quarterly dataset was harvested once, by hand,
+  by reading the published article and transcribing the figures. All 70 records
+  were later re-checked against the source; see **Data and attribution**.
 - One quarter of history, so trends are quoted from the source rather than computed.
-- No tests yet on the store and detectors.
+  Q1 2026 is the obvious next harvest and would make quarter-on-quarter computed.
+- Tests cover the store, the time axis and the detectors. Nothing covers the
+  Streamlit layer or the agent loop; both are exercised by hand.
 - No authentication, no multi-user, no deployment pipeline. Local run only.

@@ -25,8 +25,9 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
+from functools import total_ordering
 from pathlib import Path
-from typing import Iterable, Literal
+from typing import Callable, Iterable, Literal
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
@@ -50,17 +51,52 @@ DELTA_FIELDS: dict[str, tuple[DeltaKind, str, str | None]] = {
     "vs_10yr_h1_avg_pct":       ("vs_avg",   "10yr_h1_avg",   "pct"),
     "vs_5yr_avg_pct":           ("vs_avg",   "5yr_avg",       "pct"),
     "vs_long_run_avg_pct":      ("vs_avg",   "long_run_avg",  "pct"),
+    "vs_long_term_h1_avg_pct":  ("vs_avg",   "long_term_h1_avg", "pct"),
     "vs_long_run_avg_bps":      ("vs_avg",   "long_run_avg",  "bps"),
     "forecast_2026_growth_pct": ("forecast", "2026",          "pct"),
 }
 
+# E-6: some spellings name the *other* period instead of the relationship, so
+# the field name carries a literal year: vs_h1_2025_pct on a 2026H1 fact just
+# means year on year. Listing those literals pins the store to one calendar
+# year -- the Q2 2027 report spells it vs_h1_2026_pct and the loader refuses to
+# open the file at all. Match the shape, resolve the relationship against the
+# fact's own period.
+_VS_PERIOD = re.compile(r"^vs_(?:(?:h[12]|q[1-4])_)?(\d{4})_(pct|bps)$")
+_FORECAST_YEAR = re.compile(r"^forecast_(\d{4})_growth_(pct|bps)$")
+
+
+def _resolve_dated_field(key: str, fact_year: int) -> tuple[DeltaKind, str, str] | None:
+    """Interpret a comparison field whose name embeds a year. None if unknown."""
+    if m := _VS_PERIOD.match(key):
+        if int(m[1]) == fact_year - 1:
+            return "yoy", "prior_year", m[2]
+        # Two or more years back is a different concept, not a rolled year.
+        # Fall through to the loud SeedSchemaError rather than mislabel it.
+        return None
+    if m := _FORECAST_YEAR.match(key):
+        return "forecast", m[1], m[2]
+    return None
+
+
 # Descriptive fields that are neither the value nor a delta.
 EXTRA_FIELDS = {
     "transactions", "schemes", "prelet_pct", "not_started_pct",
-    "absolute_sqft", "yoy_change_pct_note",
+    "absolute_sqft", "yoy_change_pct_note", "share_pct",
 }
 
 CORE_FIELDS = {"metric", "submarket", "period", "value", "unit", "note", "sector"}
+
+# E-9: _parse_fact raises on an unknown field *inside* a fact, but load() read
+# four known top-level keys and dropped everything else in silence -- which is
+# exactly where a new harvest adds things. sector_take_up_2026H1 sat unread in
+# the seed from the day it was written. Same discipline, one level up.
+TOP_LEVEL_KEYS = {"source", "period", "facts", "events"}
+
+# Sector tables bake the period into the key, the same disease E-6 fixes for
+# delta fields. Match the shape and parse the period out, so seed_2027Q1.json
+# does not need a code change to be read.
+_SECTOR_TABLE = re.compile(r"^sector_(\w+?)_(\d{4}(?:H[12]|Q[1-4])?)$")
 
 
 class SeedSchemaError(ValueError):
@@ -77,7 +113,13 @@ _YEAR = re.compile(r"^(\d{4})$")
 _RANGE = re.compile(r"^(\d{4})(?:H[12])?-(\d{4})$")
 
 
-@dataclass(frozen=True, order=True)
+# Grain, tightest first. Used to break ties between two periods that close at
+# the same moment: 2026Q4 is a tighter reading of the same instant than 2026H2.
+_GRAIN = {"quarter": 0, "half": 1, "year": 2, "range": 3}
+
+
+@total_ordering
+@dataclass(frozen=True)
 class Period:
     year: int
     kind: str          # "quarter" | "half" | "year" | "range"
@@ -118,6 +160,34 @@ class Period:
         a, b = self.months
         c, d = other.months
         return a <= c and d <= b
+
+    def ends(self) -> tuple[int, int]:
+        """(year, month) at which the period closes.
+
+        The chronological anchor. "Latest" means "closes last", which is the
+        only definition that works across mixed grain: 2027H1 closes after
+        2026Q4 even though a quarter is the tighter reading.
+        """
+        if self.kind == "range":
+            return self.end_year, 12
+        return self.year, self.months[1]
+
+    def order_key(self) -> tuple:
+        """Total, chronological ordering.
+
+        `order=True` on the dataclass sorted on the *fields*, which put `kind`
+        second and compared it as a string: "half" < "quarter" < "range" <
+        "year". That made Period("2026H2") < Period("2026Q1") -- July-December
+        ranked before January-March. Nothing compared Periods yet, so it never
+        fired, but every "give me the most recent one" this fix adds would have
+        inherited it.
+        """
+        return (*self.ends(), _GRAIN.get(self.kind, 9), self.raw)
+
+    def __lt__(self, other: object):
+        if not isinstance(other, Period):
+            return NotImplemented
+        return self.order_key() < other.order_key()
 
     def __str__(self) -> str:
         return self.raw or f"{self.year}"
@@ -244,28 +314,75 @@ class Store:
             for ev in raw.get("events", []):
                 events.append({**ev, "_source": src})
 
+            # Sector tables become ordinary Facts. They are take-up
+            # measurements carrying a sector, and Fact already treats sector as
+            # part of its identity (E-3) and already allows an unpublished
+            # level (E-4) -- Tech & Media publishes a share and no absolute.
+            # A parallel model would duplicate all of that.
+            unknown = []
+            for key in sorted(set(raw) - TOP_LEVEL_KEYS):
+                m = _SECTOR_TABLE.match(key)
+                if not m:
+                    unknown.append(key)
+                    continue
+                metric, period = m[1], Period.parse(m[2])
+                for row in raw[key]:
+                    # Defaults first so a row's own values win; metric and
+                    # period last because the key, not the row, defines them.
+                    fact = cls._parse_fact(
+                        {"submarket": "Central London", "unit": "sqft", **row,
+                         "metric": metric, "period": str(period)},
+                        src, path.name)
+                    key_id = (fact.metric, fact.submarket, str(fact.period),
+                              fact.sector)
+                    if key_id in seen:
+                        continue
+                    seen.add(key_id)
+                    facts.append(fact)
+
+            if unknown:
+                raise SeedSchemaError(
+                    f"{path.name}: unrecognised top-level key(s) {unknown}. "
+                    f"Add them to TOP_LEVEL_KEYS in store.py, or to the "
+                    f"_SECTOR_TABLE shape if they are sector breakdowns. "
+                    f"Silently ignoring them is how 6 rows went unread."
+                )
+
         return cls(facts, events, sources)
 
     @staticmethod
     def _parse_fact(row: dict, src: Source, filename: str) -> Fact:
-        unknown = set(row) - CORE_FIELDS - set(DELTA_FIELDS) - EXTRA_FIELDS
-        if unknown:
-            raise SeedSchemaError(
-                f"{filename}: unrecognised field(s) {sorted(unknown)} on "
-                f"{row.get('metric')}/{row.get('submarket')}. Add them to "
-                f"DELTA_FIELDS or EXTRA_FIELDS in store.py."
-            )
-
+        period = Period.parse(row["period"])
         unit = row.get("unit", "")
+
+        # Literal spellings first, so existing seeds parse byte-identically.
         deltas = []
         for key, (kind, basis, dunit) in DELTA_FIELDS.items():
             if (v := row.get(key)) is not None:
                 deltas.append(Delta(kind, basis, float(v), dunit or unit))
 
+        # Then the year-bearing shapes (E-6). Anything still unrecognised is a
+        # genuinely new concept and still fails loud.
+        unknown = []
+        for key in sorted(set(row) - CORE_FIELDS - set(DELTA_FIELDS) - EXTRA_FIELDS):
+            spec = _resolve_dated_field(key, period.year)
+            if spec is None:
+                unknown.append(key)
+            elif (v := row.get(key)) is not None:
+                kind, basis, dunit = spec
+                deltas.append(Delta(kind, basis, float(v), dunit or unit))
+
+        if unknown:
+            raise SeedSchemaError(
+                f"{filename}: unrecognised field(s) {unknown} on "
+                f"{row.get('metric')}/{row.get('submarket')}. Add them to "
+                f"DELTA_FIELDS or EXTRA_FIELDS in store.py."
+            )
+
         return Fact(
             metric=row["metric"],
             submarket=row["submarket"],
-            period=Period.parse(row["period"]),
+            period=period,
             value=None if row.get("value") is None else float(row["value"]),
             unit=unit,
             source=src,
@@ -314,19 +431,13 @@ class Store:
         E-3: defaults to sector=None (the total), so `active_demand` never
         silently returns the Tech & Media slice. Raises if still ambiguous.
         E-2: an exact-period miss falls back to the enclosing period.
+        E-7: which tie-break applies depends on what was asked. See _rank.
         """
         exact = self.find(metric, submarket, period, sector)
         if len(exact) == 1:
             return exact[0]
         if len(exact) > 1:
-            # "No period given" means "the latest". Rank on one composite key:
-            # tightest period first, then most recent. Two quarters used to tie
-            # on kind alone and raise, which broke top_rent/West End the moment
-            # a single prior-quarter comparison row entered the seed -- and
-            # would break ~20 metrics if a second quarter were ever harvested.
-            order = {"quarter": 0, "half": 1, "year": 2, "range": 3}
-            rank = lambda f: (order.get(f.period.kind, 9),
-                              -f.period.year, -f.period.months[1])
+            rank = self._rank(period)
             exact.sort(key=rank)
             if rank(exact[0]) != rank(exact[1]):
                 return exact[0]
@@ -337,12 +448,90 @@ class Store:
             )
         return None
 
+    @staticmethod
+    def _rank(period) -> Callable[[Fact], tuple]:
+        """E-7: two different questions wear the same method name.
+
+            period given    "the figure as at 2026Q2". find() has already cut
+                            the candidates down to ones overlapping it, so the
+                            tightest reading wins: an exact Q2 beats the H1
+                            that encloses it. That is E-2.
+
+            period omitted  "the latest figure". Recency has to dominate and
+                            grain may only break ties. Ranking grain first
+                            returned a 2026Q2 fact over a 2027H1 one, printing
+                            last year's number under this year's as-of date
+                            with no error -- the exact failure this store's
+                            docstring exists to prevent. Metrics do change
+                            grain between reports, so this is not theoretical.
+        """
+        def recency(f: "Fact") -> tuple[int, int]:
+            year, month = f.period.ends()
+            return -year, -month
+
+        def grain(f: "Fact") -> int:
+            return _GRAIN.get(f.period.kind, 9)
+
+        if period is None:
+            return lambda f: (recency(f), grain(f))
+        return lambda f: (grain(f), recency(f))
+
+    def get_pair(
+        self,
+        metric_a: str,
+        metric_b: str,
+        submarket: str,
+        sector: str | None = None,
+    ) -> tuple[Fact, Fact] | None:
+        """Two metrics at the newest period where BOTH are published.
+
+        E-8: once a second quarter is loaded, get() answers each metric on its
+        own and will happily hand back a 2027 Grade A beside a 2026 Grade B.
+        Subtracting those and calling the result "the gap over the year" is a
+        fabricated number that no source supports. Any detector differencing
+        two metrics must come through here.
+        """
+        a = {f.period: f for f in self.find(metric_a, submarket, sector=sector)}
+        b = {f.period: f for f in self.find(metric_b, submarket, sector=sector)}
+        shared = set(a) & set(b)
+        if not shared:
+            return None
+        newest = max(shared)
+        return a[newest], b[newest]
+
+    def find_events(self, type: str | None = None, sector: str | None = None,
+                    submarket: str | None = None, min_sqft: int | None = None,
+                    limit: int = 10) -> list[dict]:
+        """Named market activity: who took space, what completed, what sold.
+
+        17 of these loaded from the seed and nothing could read them. The
+        sidebar printed a count while the agent had no way to answer "who is
+        taking space right now" -- with Anthropic, OpenAI and Barclays sitting
+        in the file. Read-only, like every tool the agent can reach (H7).
+
+        Sorted by size descending: for this reader the biggest deal is the lede.
+        """
+        out = [e for e in self.events
+               if (not type or e.get("type") == type)
+               and (not sector or e.get("sector") == sector)
+               and (not submarket or e.get("submarket") == submarket)
+               and (not min_sqft or (e.get("sqft") or 0) >= min_sqft)]
+        out.sort(key=lambda e: e.get("sqft") or 0, reverse=True)
+        return out[:limit]
+
+    def event_types(self) -> list[str]:
+        return sorted({e["type"] for e in self.events if "type" in e})
+
     def submarkets(self) -> list[str]:
         return sorted({f.submarket for f in self.facts})
 
     def metrics(self) -> list[str]:
         return sorted({f.metric for f in self.facts})
 
+    def newest_source(self) -> Source:
+        """The most recently published source backing this store."""
+        return max(self.sources, key=lambda s: s.published)
+
     def as_of(self) -> str:
         """Publication date of the newest source. Drives the staleness banner."""
-        return max(s.published for s in self.sources)
+        return self.newest_source().published
