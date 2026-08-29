@@ -44,3 +44,21 @@ assets:
     passing_rent_psf: 52.00
     epc_rating: "C"
     note: "Fringe location, exposed to elevated fringe vacancy"
+
+  # The peer-comparison demo asset. The name is invented and collides with no
+  # building on the estate roster; the sqft, year, rents and the rateable
+  # value below are fictional too. They are the inputs to the building-vs-
+  # building card, whose PEERS are real buildings with real VOA figures --
+  # which is exactly why the fictional label matters most here.
+  - name: "Meridian Quay Tower"
+    submarket: "Canary Wharf"
+    grade: "A"
+    sqft: 260000
+    year_built: 2001
+    lease_expiry: "2029-03"
+    break_date: "2027-12"
+    passing_rent_psf: 49.50
+    rateable_value_psm: 295.00
+    epc_rating: "C"
+    note: "Mid-size estate tower, single tenant, break ahead of a heavy
+      delivery window. Valued above its street on the 2024 basis."

@@ -79,7 +79,8 @@ with st.sidebar:
     st.caption(f"{len(store.facts)} facts · {len(store.events)} events")
 
     if not agent.enabled:
-        st.warning("No `GOOGLE_API_KEY`, so chat is off. The brief still works.")
+        st.warning("No `GOOGLE_API_KEY`, so chat is off. Add one to `.env` to "
+                   "enable it.")
 
     st.divider()
     if st.button("Clear conversation", use_container_width=True):
@@ -111,10 +112,10 @@ with st.chat_message("assistant"):
                 reason = s.match_reasons.get(name)
                 action = s.match_actions.get(name)
                 if reason:
-                    # The decision verb is rendered here, from Python, because
-                    # this page is the no-API-key path: a model-authored verb
-                    # would leave the headline feature blank for a reader
-                    # running without a key.
+                    # The decision verb is rendered here, from Python, so it
+                    # is identical on every run and a test can assert what is
+                    # in the vocabulary. A model-authored verb could only be
+                    # asked to stay inside ACTIONS, never held to it.
                     st.markdown(f"**{name}** — {reason}"
                                 + (f"  \n→ **{action}**" if action else ""))
                 else:
@@ -151,7 +152,10 @@ if not st.session_state.messages and agent.enabled:
     seeds = ["Should we be worried about the City Fringe?",
              "Who's taking space right now?",
              "What's driving demand right now?",
-             "What should I do about Mayfair House?"]
+             "What should I do about Mayfair House?",
+             # The leading demo: building vs building against named peers.
+             "Is Meridian Quay Tower priced right against its peers?",
+             "Compare our Mayfair building to its neighbours"]
     for i in range(0, len(seeds), 2):
         for col, q in zip(st.columns(2), seeds[i:i + 2]):
             if col.button(q, use_container_width=True):

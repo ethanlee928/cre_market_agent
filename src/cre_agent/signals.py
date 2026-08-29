@@ -146,9 +146,9 @@ def _epc_ready(asset: Asset) -> bool:
 def _reversion(asset: Asset, grade_a: Fact, grade_b: Fact) -> tuple[str, str]:
     """What the grade spread means for one building, and what to do about it.
 
-    Computed in Python, not asked of the model. The brief renders on load with
-    no API key, so a model-authored figure or verb would leave the headline
-    feature blank for the reader most likely to be evaluating it.
+    Computed in Python, not asked of the model. This is the arithmetic someone
+    carries into a meeting, so it has to be identical on every run and unit-
+    testable line by line. A model-authored figure is neither.
 
     Two figures, never three. Passing-minus-Grade-B and Grade-A-minus-passing
     sum exactly to the grade gap, so rendering all three invites a reader to
@@ -385,7 +385,146 @@ def sector_demand(store: Store, watchlist=None) -> list[Signal]:
     return [sig for _, sig in out[:1]]
 
 
+def peer_gap(store: Store, watchlist=None) -> list[Signal]:
+    """A holding against named peer buildings: aligned, expensive, or cheap.
+
+    The industry reviewer's question, answered at the granularity they asked
+    for. comps.compare assembles the peer set and the benchmarks; this
+    detector chooses the severity and the verb, next to ACTIONS, and renders
+    the table. A Refusal emits nothing: a comparison that cannot name its
+    peers does not fire, the same rule as an exposure a signal cannot justify.
+    """
+    from . import comps
+
+    out = []
+    for asset in (watchlist.assets if watchlist else []):
+        c = comps.compare(asset, store)
+        if isinstance(c, comps.Refusal):
+            continue
+        severity, reason, action = _peer_verdict(asset, c)
+
+        if c.valuation_gap_share is not None:
+            share = c.valuation_gap_share
+            direction = ("above" if share > 0 else "below") \
+                if abs(share) > ALIGNED_BAND else "in line with"
+            pct = f"{abs(share) * 100:.0f}% " if direction != "in line with" else ""
+            headline = (f"{asset.name} valued {pct}{direction} its "
+                        f"{c.valuation_n}-peer street "
+                        f"(£{c.asset_value_psm:,.0f} against "
+                        f"£{c.valuation_avg_psm:,.0f} per m²)")
+        else:
+            headline = (f"{asset.name} against {len(c.peers)} named peers: "
+                        f"no verdict computable")
+
+        sig = Signal(
+            id=f"peer_gap:{asset.name}",
+            severity=severity,
+            headline=headline,
+            detail=_peer_table(asset, c),
+            evidence=list(c.evidence),
+            affected=[asset.name],
+        )
+        sig.match_reasons[asset.name] = reason
+        sig.match_actions[asset.name] = action
+        out.append(sig)
+    return out
+
+
+# Within this band of the valuation median, passing is "in line": no lease
+# event should be forced by a gap smaller than a normal negotiation range.
+ALIGNED_BAND = 0.05
+
+
+def _peer_verdict(asset: Asset, c) -> tuple[Severity, str, str]:
+    """Severity, reason sentence and decision verb for one comparison.
+
+    Computed here, beside ACTIONS, for the same reason as _reversion: this is
+    the arithmetic someone carries into a meeting. Like for like only (C-3):
+    the verdict rides on valuation-against-valuation, with the contract-rent
+    comparison as the second figure. Two figures, never three -- no cross-
+    basis difference is ever rendered, because a passing rent minus a
+    valuation is a number no source supports.
+    """
+    if c.asset_value_psm is None:
+        return WATCH, ("no valuation on file for this building, so the "
+                       "like-for-like street comparison cannot run; the peer "
+                       "table above is the answer."), "hold"
+    if c.valuation_avg_psm is None:
+        return WATCH, (f"no verdict is computable: {c.valuation_refusal}."), "hold"
+
+    share = c.valuation_gap_share
+    bits = [
+        f"valued at £{c.asset_value_psm:,.2f} per m² against a "
+        f"£{c.valuation_avg_psm:,.2f} per m² median across {c.valuation_n} "
+        f"named peer buildings, like for like on the VOA "
+        f"{c.valuation_period} valuation basis"
+    ]
+    if c.valuation_gap_annual is not None:
+        bits.append(f"£{abs(c.valuation_gap_annual):,.0f} a year of implied "
+                    f"rental value {'above' if share > 0 else 'below'} the "
+                    f"street across {asset.sqft:,} sq ft")
+    if c.achieved_psf is not None and asset.passing_rent_psf is not None:
+        bits.append(f"on contract terms, passing £{asset.passing_rent_psf:,.2f} "
+                    f"psf against a £{c.achieved_psf:,.2f} psf median over "
+                    f"{c.achieved_n} reported peer lettings")
+    elif c.achieved_refusal:
+        bits.append(c.achieved_refusal)
+
+    if share > ALIGNED_BAND:
+        return RISK, "; ".join(bits) + (
+            ". A building priced above its street is the one a tenant "
+            "renegotiates first."), "regear"
+    if share < -ALIGNED_BAND:
+        return OPPORTUNITY, "; ".join(bits) + (
+            ". Priced below the street is reversion waiting for a review "
+            "date."), "re-price"
+    return WATCH, "; ".join(bits) + (
+        ". Within the band a negotiation would move it either way."), "hold"
+
+
+def _peer_table(asset: Asset, c) -> str:
+    """The comparison table, in markdown, every cell computed or refused.
+
+    The asset's own row carries the fictional label: a made-up passing rent
+    sitting beside real buildings' real figures reads as more authoritative
+    than anywhere else it renders, so the label rides in the same row as the
+    number (the honesty guarantee, applied where it is under the most load).
+    """
+    def cell(v, fmt="{}"):
+        return fmt.format(v) if v is not None else "not published"
+
+    lines = [
+        "| Building | Size (sq ft) | Built | EPC | VOA valuation* | Reported rent |",
+        "|---|---|---|---|---|---|",
+        f"| **{asset.name}** (yours — fictional) | {cell(asset.sqft, '{:,}')} "
+        f"| {cell(asset.year_built)} | {cell(asset.epc_rating)} "
+        f"| {cell(asset.rateable_value_psm, '£{:,.2f}/m² (fictional)')} "
+        f"| passing {cell(asset.passing_rent_psf, '£{:,.2f} psf')} (fictional) |",
+    ]
+    for row in c.rows:
+        lines.append(
+            f"| {row['peer']} | {cell(row['sqft'], '{:,}')} "
+            f"| {cell(row['year_built'])} | {cell(row['epc'])} "
+            f"| {cell(row['valuation_psm'], '£{:,.2f}/m²')} "
+            f"| {cell(row['reported_rent_psf'], '£{:,.2f} psf')} |")
+
+    rules = ("Peers qualify on: same submarket; floor area within ×/÷2"
+             + ("; completion year within ±10 years."
+                if c.age_rule_applied else
+                ". The age rule did not run: the asset declares no completion "
+                "year."))
+    lines.append("")
+    lines.append(
+        f"{rules} \\*Valuations are VOA rateable values — each building's "
+        f"aggregate rateable value over aggregate floor area across its "
+        f"office hereditaments — on a {c.valuation_period or 'fixed-date'} "
+        f"valuation basis. They sit below headline rents by construction and "
+        f"are compared only with each other, never with a passing rent.")
+    return "\n".join(lines)
+
+
 DETECTORS: list[Callable[..., list[Signal]]] = [
+    peer_gap,
     quality_spread,
     supply_shock,
     large_occupier_squeeze,

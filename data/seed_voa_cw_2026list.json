@@ -1,0 +1,41 @@
+{
+  "source": {
+    "publisher": "Valuation Office Agency",
+    "title": "2026 non-domestic rating list, compiled summary valuations (baseline epoch 0003), Canary Wharf office aggregation",
+    "published": "2026-04-01",
+    "url": "https://voaratinglists.blob.core.windows.net/html/rlidata.htm"
+  },
+  "_method": "Each figure is the building's aggregate rateable value divided by aggregate floor area across the office hereditaments matched to it in the E14 slice of the national file (record type 01, description containing 'Office', street name plus trailing street number). Values are in GBP per square metre on the list's antecedent valuation date of 1 April 2024. A count of 1 is a single whole-building assessment, which embeds quantum discounts; large counts are floor-by-floor multi-lets, sometimes including serviced-office suites. 15 Canada Square, 33 Canada Square and 10 Cabot Square had no matchable office assessment in the slice and so carry no figure at all rather than a guessed one.",
+  "facts": [
+    {"metric": "rateable_value_avg", "submarket": "Canary Wharf", "building": "One Canada Square", "period": "2024", "value": 340.83, "unit": "gbp_psm", "hereditaments": 176,
+     "note": "Aggregate RV £28,891,750 over 84,769 m² across 176 office hereditaments; multi-let, includes serviced suites priced to £455/m² against £350/m² whole floors."},
+    {"metric": "rateable_value_avg", "submarket": "Canary Wharf", "building": "8 Canada Square", "period": "2024", "value": 233.47, "unit": "gbp_psm", "hereditaments": 1,
+     "note": "Single whole-building assessment (HSBC): £23,540,000 over 100,828 m². Quantum discount embedded."},
+    {"metric": "rateable_value_avg", "submarket": "Canary Wharf", "building": "25 Canada Square", "period": "2024", "value": 232.40, "unit": "gbp_psm", "hereditaments": 1,
+     "note": "Single assessment covering 62,649 m² at £14,560,000; the tower is larger, so part of it is assessed elsewhere or under refurbishment."},
+    {"metric": "rateable_value_avg", "submarket": "Canary Wharf", "building": "20 Canada Square", "period": "2024", "value": 263.47, "unit": "gbp_psm", "hereditaments": 8,
+     "note": "£13,032,000 over 49,462 m² across 8 office hereditaments."},
+    {"metric": "rateable_value_avg", "submarket": "Canary Wharf", "building": "5 Canada Square", "period": "2024", "value": 284.89, "unit": "gbp_psm", "hereditaments": 3,
+     "note": "£10,590,000 over 37,172 m² across 3 office hereditaments; part of the building is assessed elsewhere."},
+    {"metric": "rateable_value_avg", "submarket": "Canary Wharf", "building": "25 Bank Street", "period": "2024", "value": 233.81, "unit": "gbp_psm", "hereditaments": 1,
+     "note": "Single whole-building assessment (JPMorgan): £21,920,000 over 93,753 m². Quantum discount embedded."},
+    {"metric": "rateable_value_avg", "submarket": "Canary Wharf", "building": "40 Bank Street", "period": "2024", "value": 321.45, "unit": "gbp_psm", "hereditaments": 55,
+     "note": "£12,336,750 over 38,379 m² across 55 office hereditaments; refurbished floors assessed to £429/m²."},
+    {"metric": "rateable_value_avg", "submarket": "Canary Wharf", "building": "20 Bank Street", "period": "2024", "value": 242.39, "unit": "gbp_psm", "hereditaments": 2,
+     "note": "£12,343,000 over 50,922 m² across 2 hereditaments (Morgan Stanley)."},
+    {"metric": "rateable_value_avg", "submarket": "Canary Wharf", "building": "10 Upper Bank Street", "period": "2024", "value": 250.52, "unit": "gbp_psm", "hereditaments": 8,
+     "note": "£20,231,000 over 80,755 m² across 8 office hereditaments."},
+    {"metric": "rateable_value_avg", "submarket": "Canary Wharf", "building": "One Churchill Place", "period": "2024", "value": 197.48, "unit": "gbp_psm", "hereditaments": 2,
+     "note": "£34,740,000 over 175,915 m² across 2 near-whole-building assessments (Barclays); the largest quantum on the estate and the lowest rate."},
+    {"metric": "rateable_value_avg", "submarket": "Canary Wharf", "building": "5 Churchill Place", "period": "2024", "value": 268.17, "unit": "gbp_psm", "hereditaments": 7,
+     "note": "£2,105,500 over 7,851 m² across 7 floor-level hereditaments; the majority of the building is assessed elsewhere."},
+    {"metric": "rateable_value_avg", "submarket": "Canary Wharf", "building": "20 Churchill Place", "period": "2024", "value": 278.79, "unit": "gbp_psm", "hereditaments": 2,
+     "note": "£572,500 over 2,054 m² across 2 seventh-floor hereditaments only; the State Street main assessment did not match in this slice."},
+    {"metric": "rateable_value_avg", "submarket": "Canary Wharf", "building": "25 Churchill Place", "period": "2024", "value": 256.78, "unit": "gbp_psm", "hereditaments": 459,
+     "note": "£11,750,925 over 45,762 m² across the 25-30 Churchill Place complex, including the EY floors (£225/m², 24,873 m²) and several hundred serviced-office suites at 30 Churchill Place priced to £365/m²."},
+    {"metric": "rateable_value_avg", "submarket": "Canary Wharf", "building": "25 Cabot Square", "period": "2024", "value": 269.94, "unit": "gbp_psm", "hereditaments": 184,
+     "note": "£10,470,850 over 38,789 m² across 184 office hereditaments (Morgan Stanley floors plus serviced suites)."},
+    {"metric": "rateable_value_avg", "submarket": "Canary Wharf", "building": "15 Westferry Circus", "period": "2024", "value": 268.30, "unit": "gbp_psm", "hereditaments": 6,
+     "note": "£1,983,500 over 7,393 m² across 6 office hereditaments."}
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "source": {
+    "publisher": "Trade press / project records",
+    "title": "Canary Wharf building events (per-event citations in notes)",
+    "published": "2026-08-29",
+    "url": "https://www.constructionenquirer.com/2026/08/13/plans-in-for-striking-hsbc-canary-wharf-tower-revamp/"
+  },
+  "_method": "Building-level vacancy and refurbishment events for the peer-comps district, harvested and cross-checked 2026-08-29. Building names match data/seed_cw_buildings_2026.json exactly where the building is on the roster, because the comps join is an exact name match. Each note names its own citations, the roster-file compromise applied to events. Known gaps, kept as gaps: the Tower Hamlets planning reference for 8 Canada Square is not in open press; HSBC's exact expiry month is unpublished ('2027'); whether Citi's 2026 completion has occurred is unconfirmed.",
+  "events": [
+    {"type": "vacating", "date": "2027", "occupier": "HSBC", "building": "8 Canada Square",
+     "sqft": 1100000, "submarket": "Canary Wharf",
+     "note": "HSBC announced June 2023 it will not renew; the lease expires in 2027. KPF retrofit plans submitted to Tower Hamlets in August 2026: offices levels 2-33, a 181-room hotel above, public rooftop, ~70-75% of structure and facade retained; trade-press cost estimate GBP 800m-1bn, unconfirmed by the developer. Sources: Construction Enquirer 2026-08-13; East London Times 2026-08-12; ianvisits 2024-07-18."},
+    {"type": "refurbishment", "date": "2026", "occupier": "Citi", "building": "25 Canada Square",
+     "submarket": "Canary Wharf",
+     "note": "Full-building refurbishment of Citi's EMEA HQ, on site since July 2023 (WilkinsonEyre / Overbury; 9,900 m2 of new facade), completion expected 2026 -- roughly GBP 1bn per Fortune 2025-01-16, against the tower's GBP 1.2bn purchase in 2019. Sources: Fortune via Yahoo Finance 2025-01-16; WilkinsonEyre and Permasteelisa project pages."},
+    {"type": "under_offer", "date": "2026Q2", "occupier": "PwC", "building": "Eden, Canada Square",
+     "sqft": 350000, "submarket": "Canary Wharf",
+     "note": "Under offer on ~350,000 sq ft per Colliers, London Offices Snapshot July 2026 (published 2026-07-29). Not on the estate roster; named as published."}
+  ]
+}

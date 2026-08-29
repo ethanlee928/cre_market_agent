@@ -1,0 +1,14 @@
+{
+  "source": {
+    "publisher": "Colliers",
+    "title": "London Offices Snapshot, January 2026 (City section)",
+    "published": "2026-01-29",
+    "url": "https://www.colliers.com/-/media/files/emea/uk/publications/service-lines/london-offices/2026/london-offices-snapshot--jan-2026.ashx?sc_lang=en-gb"
+  },
+  "_method": "Read from the PDF's text layer 2026-08-29. The 8.3%/13.8% pair describes Q4 2025 against Q4 2024 -- NOT Q1 2026, as a search snippet mis-attributed before verification. Colliers' April and July 2026 editions publish no numeric Canary Wharf vacancy (chart bar only), so this Q4 2025 figure is the most recent open numeral and is filed at its true period; a fresher number exists only behind the CoStar paywall. Verbatim: 'In Canary Wharf, availability fell due to above average demand. Vacancy (8.3%) saw its largest annual downward fall from 13.8%. Availability is at its lowest level since 2020.'",
+  "facts": [
+    {"metric": "vacancy_rate", "submarket": "Canary Wharf", "period": "2025Q4",
+     "value": 8.3, "unit": "pct", "yoy_change_bps": -550,
+     "note": "All-grade vacancy, down from 13.8% a year earlier -- its largest annual fall; availability at its lowest since 2020. The most recent openly published numeral: later 2026 editions show Canary Wharf only as an unlabelled chart bar."}
+  ]
+}

@@ -1,0 +1,30 @@
+# Host artefacts, secrets, and everything the running app never reads.
+# Two jobs: keep the image small, and keep the `COPY . /app` layer from being
+# invalidated by edits that cannot possibly change how the app behaves.
+
+# The host venv holds macOS wheels. Copying it would shadow the Linux venv
+# that `uv sync` builds at /app/.venv and break the image in a confusing way.
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# The key never enters an image layer. It arrives at run time, via
+# `docker run --env-file .env` (see the Makefile).
+.env
+
+.git/
+.gitignore
+.pytest_cache/
+.cache/
+.claude/
+.gstack/
+out/
+
+# Prose and slides. Not read at run time; edited often.
+docs/
+slides/
+
+Dockerfile
+.dockerignore
+Makefile

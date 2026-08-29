@@ -1,0 +1,14 @@
+{
+  "source": {
+    "publisher": "Carter Jonas",
+    "title": "The London Office Market Q1 2026 -- A Guide To Rents, Rent Free Periods & Market Trends (Table 1)",
+    "published": "2026-04-16",
+    "url": "https://assets.ctfassets.net/2u48p9m6vmwh/nCIVNrupqwRduHBocjR1v/9d32cddd516034c8a3c84292afd26715/Guide_To_London_Office_Rents___Rent_Free_Periods___Market_Trends_-_Q1_2026.pdf"
+  },
+  "_method": "Verified 2026-08-29 against the PDF table row 'East London - Canary Wharf': GBP 52.50 (Q1 2021) | 55.00 (Q1 2025) | 57.50 (Q1 2026) | 9.52% 5yr | 4.55% 1yr. A search snippet had mis-attributed this figure to Colliers; it is Carter Jonas. Their Q2 2026 Net Effective Rents Monitor reports Canary Wharf annual growth accelerating to 5.7% but publishes no new absolute level, so Q1 stands as the latest.",
+  "facts": [
+    {"metric": "prime_rent", "submarket": "Canary Wharf", "period": "2026Q1",
+     "value": 57.50, "unit": "gbp_psf", "vs_prior_year_pct": 4.55,
+     "note": "Headline rent, new & refitted mid-rise Grade A over 5,000 sq ft, excluding incentives; upper floors run GBP 62.50-72.50. Five-year change +9.52% (from GBP 52.50 at Q1 2021). Rent-free periods in the district: 13-15 months on a 5-year term."}
+  ]
+}

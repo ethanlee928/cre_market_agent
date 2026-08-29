@@ -69,21 +69,29 @@ def test_exact_node_wins_over_the_parent():
 def test_climb_is_off_by_default():
     """Detectors ask about a submarket and mean that submarket.
 
-    Canary Wharf holds no facts. Answering with the Central London figure
-    unasked would attribute a number to a geography the source never
+    Southbank holds no facts (Canary Wharf, the old example here, now
+    publishes via the Colliers seed). Answering with the Central London
+    figure unasked would attribute a number to a geography the source never
     published it for.
     """
     s = store()
-    assert s.get("vacancy_rate", "Canary Wharf") is None
-    climbed = s.get("vacancy_rate", "Canary Wharf", climb=True)
+    assert s.get("vacancy_rate", "Southbank") is None
+    climbed = s.get("vacancy_rate", "Southbank", climb=True)
     assert climbed is not None and climbed.submarket == "Central London"
+    # And the geography that used to be the gap now answers at its own node.
+    assert s.get("vacancy_rate", "Canary Wharf").submarket == "Canary Wharf"
 
 
 def test_unknown_submarket_never_climbs():
     s = store()
     assert s.get("vacancy_rate", "Basingstoke", climb=True) is None
     assert s.resolve_submarket("Basingstoke") is None
-    assert s.resolve_submarket("Canary Wharf") == "docklands"
+    # "Canary Wharf" used to be an alias of docklands; the peer-comps work
+    # gave the estate its own node because Colliers publishes figures for the
+    # estate, not for all of E14. The hierarchy still connects them.
+    assert s.resolve_submarket("Canary Wharf") == "canary_wharf"
+    assert s.index.covers("Canary Wharf", "Docklands")
+    assert s.index.covers("Canary Wharf", "Central London")
 
 
 def test_detector_output_is_unchanged_by_resolution():
@@ -91,6 +99,7 @@ def test_detector_output_is_unchanged_by_resolution():
     from cre_agent.signals import detect_all
     sigs = detect_all(Store.load(), Watchlist.load())
     assert [s.id for s in sigs] == [
+        "peer_gap:Meridian Quay Tower",       # the peer-comps lead card
         "quality_spread:City",
         "quality_spread:West End",
         "supply_shock:Central London",
@@ -148,11 +157,11 @@ def test_tool_distinguishes_a_typo_from_a_data_gap():
 def test_tool_discloses_a_broader_geography():
     a = tools()
     r = a._run_tool("get_metric",
-                    {"metric": "vacancy_rate", "submarket": "Canary Wharf"})
+                    {"metric": "vacancy_rate", "submarket": "Southbank"})
     assert r["found"] is True
-    assert r["asked_about"] == "Canary Wharf"
+    assert r["asked_about"] == "Southbank"
     assert r["submarket"] == "Central London"
-    assert "does not break out Canary Wharf" in r["broader_geography"]
+    assert "does not break out Southbank" in r["broader_geography"]
 
 
 def test_tool_does_not_cry_broader_for_an_exact_alias():
@@ -166,7 +175,7 @@ def test_filtered_events_state_what_the_filter_cannot_see():
     a = tools()
     r = a._run_tool("find_market_activity", {"submarket": "West End"})
     assert r["count"] >= 1
-    assert "13 of 17" in r["coverage_caveat"]
+    assert "13 of 20" in r["coverage_caveat"]
 
     unfiltered = a._run_tool("find_market_activity", {})
     assert "coverage_caveat" not in unfiltered

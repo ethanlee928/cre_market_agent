@@ -231,3 +231,31 @@ cases:
     expect:
       must_call: [{tool: get_metric}]
       figures_sourced: true
+
+  # -- building vs building: the peer-comps lead demo -----------------------
+
+  - id: peer_comparison_lead
+    question: "Is Meridian Quay Tower priced right against its peers?"
+    expect:
+      must_call: [{tool: compare_building}]
+      # The verdict is valuation-vs-valuation in £/m² (C-3). Mixing bases --
+      # a passing-psf-minus-valuation figure -- is the defect the design
+      # retired, so a "£N psf above/below" claim must not appear.
+      forbid: ['\bmonitor', 'keep an eye', 'psf (above|below)']
+      action_verb: true
+      figures_sourced: true
+
+  - id: peer_value_for_money
+    question: "Is Meridian Quay Tower value for money compared with 25 Cabot Square?"
+    expect:
+      must_call: [{tool: compare_building}]
+      figures_sourced: true
+
+  - id: peer_comparison_refuses_off_roster
+    # No roster outside Canary Wharf: the correct answer relays the computed
+    # refusal instead of assembling peers from memory or the open web.
+    question: "Compare our Mayfair building to its neighbouring buildings"
+    expect:
+      must_call: [{tool: compare_building|get_watchlist}]
+      refusal_or_web: true
+      forbid: ['\bmonitor']

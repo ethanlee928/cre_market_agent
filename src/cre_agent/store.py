@@ -44,6 +44,7 @@ DELTA_FIELDS: dict[str, tuple[DeltaKind, str, str | None]] = {
     "qoq_change_bps":           ("qoq",      "prior_quarter", "bps"),
     "qoq_change_pct":           ("qoq",      "prior_quarter", "pct"),
     "yoy_change_pct":           ("yoy",      "prior_year",    "pct"),
+    "yoy_change_bps":           ("yoy",      "prior_year",    "bps"),
     "vs_prior_year_pct":        ("yoy",      "prior_year",    "pct"),
     "vs_h1_2025_pct":           ("yoy",      "prior_year",    "pct"),
     "ytd_change_pct":           ("ytd",      "year_start",    "pct"),
@@ -92,15 +93,28 @@ EXTRA_FIELDS = {
     # the sentence stays for provenance. Same defect class as the sector rows
     # in 716a779: published, transcribed, and unreadable by any code path.
     "share_of_under_offer_pct",
+    # How many VOA office hereditaments a building-level rateable_value_avg
+    # aggregates over. n=1 is a whole-building assessment (quantum discounts
+    # embedded); n=459 is a floor-by-floor multi-let. A reader weighing the
+    # figure needs the count, so it travels as data, not prose.
+    "hereditaments",
 }
 
-CORE_FIELDS = {"metric", "submarket", "period", "value", "unit", "note", "sector"}
+CORE_FIELDS = {"metric", "submarket", "period", "value", "unit", "note", "sector",
+               "building"}
+
+# The roster: identity plus physical constants for a named, real building.
+# Measurements about a building (rateable value, achieved rent) are ordinary
+# Facts carrying `building`; the roster row is only what does not move. Same
+# fail-loud discipline as facts: an unknown field raises, never drops.
+BUILDING_FIELDS = {"name", "submarket", "sqft", "year_built", "floors",
+                   "epc_rating", "note"}
 
 # E-9: _parse_fact raises on an unknown field *inside* a fact, but load() read
 # four known top-level keys and dropped everything else in silence -- which is
 # exactly where a new harvest adds things. sector_take_up_2026H1 sat unread in
 # the seed from the day it was written. Same discipline, one level up.
-TOP_LEVEL_KEYS = {"source", "period", "facts", "events"}
+TOP_LEVEL_KEYS = {"source", "period", "facts", "events", "buildings"}
 
 # Sector tables bake the period into the key, the same disease E-6 fixes for
 # delta fields. Match the shape and parse the period out, so seed_2027Q1.json
@@ -245,6 +259,10 @@ class Fact:
     unit: str
     source: Source
     sector: str | None = None      # E-3: part of the identity
+    building: str | None = None    # part of the identity, the same move as
+                                   # sector: two buildings' rateable values are
+                                   # different facts, and a market-level lookup
+                                   # must never return a building's figure
     note: str | None = None
     deltas: tuple[Delta, ...] = ()
     extras: dict = field(default_factory=dict)
@@ -264,6 +282,11 @@ class Fact:
             return f"{self.value:.1f}%"
         if self.unit == "gbp_psf":
             return f"£{self.value:,.2f} psf"
+        if self.unit == "gbp_psm":
+            # The VOA publishes per square metre. Rendered as m² so a reader
+            # can never mistake it for psf; conversion is comps.psm_to_psf's
+            # job, in exactly one place (invariant C-1).
+            return f"£{self.value:,.2f} per m²"
         if self.unit == "sqft":
             return f"{self.value:,.0f} sq ft"
         if self.unit == "gbp":
@@ -274,7 +297,30 @@ class Fact:
 
     def label(self) -> str:
         base = self.metric.replace("_", " ")
-        return f"{self.submarket} {base}" + (f" [{self.sector}]" if self.sector else "")
+        where = f"{self.building}, {self.submarket}" if self.building else self.submarket
+        return f"{where} {base}" + (f" [{self.sector}]" if self.sector else "")
+
+
+@dataclass(frozen=True)
+class Building:
+    """One real, named building: the identity half of a peer comparison.
+
+    Only what does not move lives here -- name, place, size, age, storeys,
+    EPC. Anything measured or valued about the building (rateable value,
+    achieved rent, a vacancy event) is a Fact or event carrying `building`,
+    so it arrives with its own Source and period like every other number.
+    Per-row provenance for these constants travels in `note`; the file-level
+    Source covers the harvest. That is the pilot's compromise, recorded in
+    docs/designs/canary-wharf-peer-comps.md.
+    """
+    name: str
+    submarket: str
+    source: Source
+    sqft: int | None = None
+    year_built: int | None = None
+    floors: int | None = None
+    epc_rating: str | None = None
+    note: str | None = None
 
 
 class AmbiguousQuery(LookupError):
@@ -287,10 +333,12 @@ class AmbiguousQuery(LookupError):
 
 class Store:
     def __init__(self, facts: list[Fact], events: list[dict], sources: list[Source],
-                 index: "SubmarketIndex | None" = None):
+                 index: "SubmarketIndex | None" = None,
+                 buildings: list[Building] | None = None):
         self.facts = facts
         self.events = events
         self.sources = sources
+        self.buildings = buildings or []
         # The controlled vocabulary. Without it every submarket lookup is a
         # string compare, so "Mayfair" misses a fact filed under "West End
         # Core (Mayfair/St James's)" and the agent answers "I don't have that"
@@ -308,7 +356,9 @@ class Store:
         facts: list[Fact] = []
         events: list[dict] = []
         sources: list[Source] = []
+        buildings: list[Building] = []
         seen: set[tuple] = set()
+        seen_buildings: set[str] = set()
 
         for path in paths:
             raw = json.loads(path.read_text())
@@ -320,7 +370,10 @@ class Store:
                 fact = cls._parse_fact(row, src, path.name)
                 # H5: the Q2 file already carries some Q1 rows. Dedupe on
                 # identity so merging a Q1 file later cannot double-count.
-                key = (fact.metric, fact.submarket, str(fact.period), fact.sector)
+                # `building` is part of the identity, or two towers' same
+                # metric collide and the second one silently drops.
+                key = (fact.metric, fact.submarket, str(fact.period),
+                       fact.sector, fact.building)
                 if key in seen:
                     continue
                 seen.add(key)
@@ -329,6 +382,19 @@ class Store:
             for ev in raw.get("events", []):
                 events.append({**ev, "_source": src})
 
+            for row in raw.get("buildings", []):
+                if unknown := sorted(set(row) - BUILDING_FIELDS):
+                    raise SeedSchemaError(
+                        f"{path.name}: unrecognised building field(s) {unknown} "
+                        f"on {row.get('name')}. Add them to BUILDING_FIELDS in "
+                        f"store.py."
+                    )
+                b = Building(source=src, **row)
+                if b.name in seen_buildings:
+                    continue
+                seen_buildings.add(b.name)
+                buildings.append(b)
+
             # Sector tables become ordinary Facts. They are take-up
             # measurements carrying a sector, and Fact already treats sector as
             # part of its identity (E-3) and already allows an unpublished
@@ -336,6 +402,12 @@ class Store:
             # A parallel model would duplicate all of that.
             unknown = []
             for key in sorted(set(raw) - TOP_LEVEL_KEYS):
+                # JSON has no comments. A leading underscore marks file-level
+                # commentary for the human reading the seed -- harvest method,
+                # aggregation rule -- deliberately unread by code, so it can
+                # never masquerade as data.
+                if key.startswith("_"):
+                    continue
                 m = _SECTOR_TABLE.match(key)
                 if not m:
                     unknown.append(key)
@@ -349,7 +421,7 @@ class Store:
                          "metric": metric, "period": str(period)},
                         src, path.name)
                     key_id = (fact.metric, fact.submarket, str(fact.period),
-                              fact.sector)
+                              fact.sector, fact.building)
                     if key_id in seen:
                         continue
                     seen.add(key_id)
@@ -363,7 +435,7 @@ class Store:
                     f"Silently ignoring them is how 6 rows went unread."
                 )
 
-        return cls(facts, events, sources)
+        return cls(facts, events, sources, buildings=buildings)
 
     @staticmethod
     def _parse_fact(row: dict, src: Source, filename: str) -> Fact:
@@ -402,6 +474,7 @@ class Store:
             unit=unit,
             source=src,
             sector=row.get("sector"),
+            building=row.get("building"),
             note=row.get("note"),
             deltas=tuple(deltas),
             extras={k: row[k] for k in EXTRA_FIELDS if k in row},
@@ -415,8 +488,11 @@ class Store:
         submarket: str | None = None,
         period: str | Period | None = None,
         sector: str | None = "__any__",
+        building: str | None = "__any__",
     ) -> list[Fact]:
-        """All matching facts. `sector=None` means only sector-free totals."""
+        """All matching facts. `sector=None` means only sector-free totals,
+        and `building=None` means only building-free market figures -- the
+        same refuse-to-guess default, third verse."""
         if isinstance(period, str):
             period = Period.parse(period)
 
@@ -427,6 +503,8 @@ class Store:
             if submarket and not self._same_submarket(f.submarket, submarket):
                 continue
             if sector != "__any__" and f.sector != sector:
+                continue
+            if building != "__any__" and f.building != building:
                 continue
             if period and not (f.period == period or period.contains(f.period)
                                or f.period.contains(period)):
@@ -440,12 +518,15 @@ class Store:
         submarket: str,
         period: str | Period | None = None,
         sector: str | None = None,
+        building: str | None = None,
         climb: bool = False,
     ) -> Fact | None:
         """One fact, or None.
 
         E-3: defaults to sector=None (the total), so `active_demand` never
         silently returns the Tech & Media slice. Raises if still ambiguous.
+        Defaults building=None the same way: a market-level question never
+        silently answers with one tower's figure.
         E-2: an exact-period miss falls back to the enclosing period.
         E-7: which tie-break applies depends on what was asked. See _rank.
 
@@ -459,14 +540,15 @@ class Store:
         submarket; silently answering about its parent would invent a figure
         the source never published for the place that was asked about.
         """
-        hit = self._get_at(metric, submarket, period, sector)
+        hit = self._get_at(metric, submarket, period, sector, building)
         if hit is not None or not climb or self.index is None:
             return hit
         sid = self.index.resolve(submarket)
         if sid is None:
             return None
         for ancestor in self.index.ancestors(sid)[1:]:
-            hit = self._get_at(metric, self.index.label(ancestor), period, sector)
+            hit = self._get_at(metric, self.index.label(ancestor), period, sector,
+                               building)
             if hit is not None:
                 return hit
         return None
@@ -477,9 +559,10 @@ class Store:
         submarket: str,
         period: str | Period | None = None,
         sector: str | None = None,
+        building: str | None = None,
     ) -> Fact | None:
         """One fact at exactly this node. The body get() always had."""
-        exact = self.find(metric, submarket, period, sector)
+        exact = self.find(metric, submarket, period, sector, building)
         if len(exact) == 1:
             return exact[0]
         if len(exact) > 1:
@@ -607,6 +690,20 @@ class Store:
         if es == query:
             return True
         return self.index is not None and self.index.covers(es, query)
+
+    def find_buildings(self, submarket: str | None = None) -> list[Building]:
+        """The roster inside a submarket. Downward, like events: a building
+        stands at a point inside a submarket, never above it, so a Docklands
+        question must reach a roster filed under Canary Wharf."""
+        if submarket is None:
+            return list(self.buildings)
+        out = []
+        for b in self.buildings:
+            if self._same_submarket(b.submarket, submarket) or (
+                    self.index is not None
+                    and self.index.covers(b.submarket, submarket)):
+                out.append(b)
+        return out
 
     def events_missing_submarket(self) -> int:
         """How many events the source files without a submarket."""

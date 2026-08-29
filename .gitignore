@@ -7,3 +7,4 @@ out/
 evals/runs/
 *.egg-info/
 .claude/
+CLAUDE.md

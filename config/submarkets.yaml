@@ -47,7 +47,15 @@ submarkets:
   docklands:
     label: Docklands
     parent: central_london
-    aliases: ["Canary Wharf", "E14"]
+    aliases: ["E14"]
+  # Colliers publishes figures for "Canary Wharf", the estate, not for all of
+  # Docklands (E14 also covers Wood Wharf's fringes, Poplar, Westferry). Filing
+  # estate figures one node too high is the H4 disease in reverse, so the
+  # estate gets its own node. The alias moves down with it.
+  canary_wharf:
+    label: Canary Wharf
+    parent: docklands
+    aliases: ["Canary Wharf estate"]
   midtown:
     label: Midtown
     parent: central_london

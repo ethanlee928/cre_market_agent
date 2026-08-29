@@ -238,17 +238,20 @@ def test_shipped_seed_is_unchanged():
 
     47 -> 53 is deliberate: the 6 sector_take_up rows were in the file from the
     day it was written and load() silently dropped them. See
-    test_sector_rows_are_reachable.
+    test_sector_rows_are_reachable. 53 -> 70 is the Canary Wharf harvest: 15
+    building-level rateable_value_avg facts (VOA), one vacancy_rate (Colliers)
+    and one prime_rent (Carter Jonas).
     """
     store = Store.load()
-    assert len(store.facts) == 53
+    assert len(store.facts) == 70
     a = store.get("grade_a_rent_avg", "City")
     assert a.value == 76.21 and a.delta("yoy").render() == "+7.0%"
     sigs = detect_all(store, Watchlist.load())
     # 4 -> 5 is deliberate: sector_demand joins the sector take-up breakdown to
     # the under-offer total, a comparison the source never states. See
-    # test_sector_demand.py.
-    assert len(sigs) == 5
+    # test_sector_demand.py. 5 -> 6 is peer_gap, the building-vs-building
+    # card. See test_peer_comps.py.
+    assert len(sigs) == 6
     assert "in 2026" in [s for s in sigs if s.id.startswith("supply")][0].detail
 
 
@@ -275,8 +278,11 @@ def test_events_are_reachable():
     assert lettings[0]["sqft"] == 158138
     # Heterogeneous shapes: Runway East has no building, Softbank no sqft.
     assert all("type" in e for e in store.find_events())
+    # The last three types arrived with the Canary Wharf press-events seed;
+    # event type is an open vocabulary read off the data, so no code changed.
     assert store.event_types() == ["completion", "development_start",
-                                   "investment", "letting"]
+                                   "investment", "letting", "refurbishment",
+                                   "under_offer", "vacating"]
 
 
 def test_unknown_top_level_key_fails_loud():

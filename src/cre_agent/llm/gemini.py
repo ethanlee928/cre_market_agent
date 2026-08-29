@@ -20,11 +20,12 @@ from typing import Any, Iterator
 from google import genai
 from google.genai import types
 
-from ..signals import detect_all
+from .. import comps
+from ..signals import _peer_verdict, detect_all
 from ..store import AmbiguousQuery, Store
 from ..watchlist import Watchlist
 
-MAX_TURNS = 6
+MAX_TURNS = 20
 
 
 @dataclass
@@ -40,7 +41,12 @@ You are a London office market analyst assisting a commercial real estate team.
 
 HARD RULES ON NUMBERS. These are the product.
 1. Every figure you state must come from a tool call. Never recall a number from
-   memory, never estimate, never interpolate between figures.
+   memory, never estimate, never interpolate between figures -- and never
+   derive new figures yourself by arithmetic over tool results: no
+   differences, sums, shares or percentages of your own. Where a comparison
+   or gap is already computed (a signal's reason, compare_building's gap
+   figures, a published delta), quote it as returned; otherwise put the
+   published figures side by side and let them speak.
 2. State the source and as-of date with any figure from the fact store.
 3. If the tools do not have something, say plainly that you do not have it and
    name what you would need. Do not guess. A clean "I don't have that" is a
@@ -64,10 +70,18 @@ client meeting. Lead with the number and what it means. Be concise. No preamble,
 no "great question", no bullet-point dumps unless asked. Two or three sentences
 usually does it.
 
-CONTEXT. The fact store holds Savills Central London Office Market Watch data.
-The user's watchlist holds their own assets, which may be empty. When a market
-fact touches one of their assets, say so explicitly, because that is the whole
-point of the tool.
+CONTEXT. The fact store holds Savills Central London Office Market Watch data,
+plus Canary Wharf submarket figures and a Canary Wharf building roster from
+separate sources (each figure carries its own). The user's watchlist holds
+their own assets, which may be empty. When a market fact touches one of their
+assets, say so explicitly, because that is the whole point of the tool.
+
+For any "this building vs that", "value for money" or "aligned with the
+market" question about a specific holding, call compare_building. Its figures,
+verdict and action verb are computed in Python and match the brief on screen;
+use them as they stand. Its roster covers Canary Wharf only, and its refusals
+(thin peer set, no roster, unpublished valuations) are correct answers: relay
+them rather than filling the gap from memory.
 """
 
 
@@ -123,6 +137,20 @@ def _declarations() -> list[types.FunctionDeclaration]:
                 "submarket": S(type=T.STRING, description="e.g. West End, City, Mayfair. Matches deals anywhere inside it. Most events carry no submarket in this source, so a filtered count is a floor, not a total."),
                 "min_sqft": S(type=T.INTEGER, description="Only deals at least this large"),
             }),
+        ),
+        types.FunctionDeclaration(
+            name="compare_building",
+            description=(
+                "Compare one watchlist asset against named peer buildings of "
+                "similar size and age in its submarket: per-peer VOA valuation, "
+                "reported peer letting rents, the medians, the gap to passing "
+                "rent, and the computed decision verb. The roster covers "
+                "Canary Wharf only; elsewhere this refuses and says why, and "
+                "that refusal is the answer to give."
+            ),
+            parameters=S(type=T.OBJECT, properties={
+                "asset": S(type=T.STRING, description="A watchlist asset name exactly as get_watchlist returns it"),
+            }, required=["asset"]),
         ),
         types.FunctionDeclaration(
             name="get_watchlist",
@@ -214,7 +242,7 @@ class Agent:
                                   | {"source": e["_source"].cite()}
                                   for e in hits]}
                 if clean.get("submarket"):
-                    # Silence here is the bug: 13 of 17 events carry no
+                    # Silence here is the bug: most Savills events carry no
                     # submarket, so a filtered list that does not say so reads
                     # as complete when it is a floor.
                     missing = self.store.events_missing_submarket()
@@ -238,15 +266,82 @@ class Agent:
                     for s in detect_all(self.store, self.watchlist)
                 ]}
 
+            if name == "compare_building":
+                asked = str(args["asset"]).strip()
+                asset = next((a for a in self.watchlist.assets
+                              if a.name.lower() == asked.lower()), None)
+                if asset is None:
+                    return {"found": False,
+                            "message": f"{asked!r} is not on the watchlist. "
+                                       f"Call get_watchlist for the names."}
+                c = comps.compare(asset, self.store)
+                if isinstance(c, comps.Refusal):
+                    # The computed no-answer. Handing it to the model verbatim
+                    # is the point: relaying it IS answering correctly.
+                    return {"found": False, "refusal": c.reason}
+                # Same code path as the brief card (signals.peer_gap), so chat
+                # and page cannot disagree about the same building.
+                severity, reason, action = _peer_verdict(asset, c)
+                return {
+                    "found": True,
+                    "asset": asset.name,
+                    "asset_is_fictional": True,
+                    "submarket": asset.submarket,
+                    "passing_rent_psf": asset.passing_rent_psf,
+                    "peers": c.rows,
+                    "peer_rules": "same submarket; size within ×/÷2"
+                                  + ("; built within ±10 years"
+                                     if c.age_rule_applied else
+                                     "; age rule skipped (asset has no year_built)"),
+                    "asset_valuation_psm": c.asset_value_psm,
+                    "street_valuation_median_psm":
+                        None if c.valuation_avg_psm is None
+                        else round(c.valuation_avg_psm, 2),
+                    "valuation_basis":
+                        (f"VOA rateable values in £ per m², {c.valuation_period} "
+                         f"valuation basis; like for like against the asset's "
+                         f"own valuation, never against a passing rent")
+                        if c.valuation_avg_psm is not None else c.valuation_refusal,
+                    "valuation_gap_pct":
+                        None if c.valuation_gap_share is None
+                        else round(c.valuation_gap_share * 100, 1),
+                    "valuation_gap_annual_gbp":
+                        None if c.valuation_gap_annual is None
+                        else round(c.valuation_gap_annual),
+                    "achieved_median_psf": c.achieved_psf,
+                    "achieved_basis":
+                        f"median of {c.achieved_n} reported peer lettings; "
+                        f"compare with passing rent, both contract figures"
+                        if c.achieved_psf is not None else c.achieved_refusal,
+                    "passing_vs_achieved_psf":
+                        None if c.passing_vs_achieved_psf is None
+                        else round(c.passing_vs_achieved_psf, 2),
+                    "verdict": reason,
+                    "recommended_action": action,
+                    "severity": severity,
+                    "sources": sorted({f.source.cite() for f in c.evidence}),
+                    # The eval caught the model deriving its own pairwise
+                    # percentage from two returned levels. Same rule as
+                    # get_signals: these figures are the computed set, closed.
+                    "arithmetic_note": (
+                        "Quote these figures as returned. Do not derive new "
+                        "percentages, differences or per-peer ratios from "
+                        "them -- the gap figures above are the only computed "
+                        "comparisons, and a question about one specific peer "
+                        "is answered with the two levels side by side."),
+                }
+
             if name == "get_watchlist":
                 return {"label": self.watchlist.label,
                         "count": len(self.watchlist),
                         "fictional": True,
                         "assets": [{"name": a.name, "submarket": a.submarket,
                                     "grade": a.grade, "sqft": a.sqft,
+                                    "year_built": a.year_built,
                                     "lease_expiry": a.lease_expiry,
                                     "break_date": a.break_date,
                                     "passing_rent_psf": a.passing_rent_psf,
+                                    "rateable_value_psm": a.rateable_value_psm,
                                     "epc_rating": a.epc_rating}
                                    for a in self.watchlist.assets]}
 
@@ -262,7 +357,7 @@ class Agent:
     def ask(self, question: str, history: list | None = None) -> Iterator[Event]:
         if not self.enabled:
             yield Event("error", payload="No GOOGLE_API_KEY set, so chat is disabled. "
-                                         "The brief and signals above are unaffected.")
+                                         "Add one to .env to enable it.")
             return
 
         contents = list(history or [])
@@ -342,7 +437,7 @@ def _friendly(e: Exception) -> str:
                 "or get a new one at https://aistudio.google.com/apikey")
     if "RESOURCE_EXHAUSTED" in msg or "429" in msg:
         return ("Gemini rate limit reached. Wait about a minute and try again. "
-                "The brief and signals above still work, they need no API.")
+                "The brief and signals above are unaffected.")
     if "NOT_FOUND" in msg or "404" in msg:
         return ("That model is not available on your key. Run "
                 "`uv run python scripts/probe_models.py` to see what is, then set "

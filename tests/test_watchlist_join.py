@@ -101,7 +101,10 @@ def test_empty_watchlist_matches_nothing_and_does_not_raise():
 
 def test_supply_shock_no_longer_claims_every_asset():
     s = supply_shock(Store.load(), Watchlist.load())[0]
-    assert set(s.affected) == {"Mayfair House", "Clerkenwell Works"}
+    # Meridian Quay Tower joined the shipped watchlist with a 2027-12 break,
+    # inside the 2026H2-2029 window, so its claim is justified.
+    assert set(s.affected) == {"Mayfair House", "Clerkenwell Works",
+                               "Meridian Quay Tower"}
     assert "120 Fenchurch Street" not in s.affected   # expiry 2031-06, outside
 
 
@@ -169,7 +172,11 @@ def test_epc_below_c_defers_capex():
 def test_market_wide_brief_is_complete_with_no_watchlist():
     store = Store.load()
     empty = detect_all(store, wl())
-    assert len(empty) == len(detect_all(store, Watchlist.load()))
+    # One fewer than the full brief: peer_gap compares a HOLDING to its
+    # street, so with no holdings there is honestly nothing to compare --
+    # unlike the market signals, which must all still fire.
+    assert len(empty) == len(detect_all(store, Watchlist.load())) - 1
+    assert not [s for s in empty if s.id.startswith("peer_gap")]
     assert all(s.affected == [] for s in empty)
     assert all(s.detail and s.citations() for s in empty)
 
@@ -177,7 +184,8 @@ def test_market_wide_brief_is_complete_with_no_watchlist():
 def test_large_occupier_squeeze_still_names_its_asset():
     """An unset scope would silently delete a correct pre-existing match."""
     sigs = {s.id: s for s in detect_all(Store.load(), Watchlist.load())}
-    assert sigs["large_occupier_squeeze:Central London"].affected == ["120 Fenchurch Street"]
+    assert sigs["large_occupier_squeeze:Central London"].affected == [
+        "120 Fenchurch Street", "Meridian Quay Tower"]
 
 
 def test_two_consecutive_runs_are_identical():
@@ -187,6 +195,33 @@ def test_two_consecutive_runs_are_identical():
                  tuple(sorted(s.match_actions.items())))
                 for s in detect_all(Store.load(), Watchlist.load())]
     assert run() == run()
+
+
+# -- the coverage table claims nothing it cannot resolve --------------------
+
+def test_every_declared_detector_exists():
+    """Rename a detector and its area must drop, not keep claiming coverage."""
+    from cre_agent.coverage import AREAS
+    from cre_agent.signals import DETECTORS
+    registered = {d.__name__ for d in DETECTORS}
+    for area in AREAS:
+        if area.detector:
+            assert area.detector in registered, f"area {area.n}: {area.detector}"
+
+
+def test_every_declared_metric_exists_or_the_area_reads_as_a_gap():
+    from cre_agent.coverage import AREAS, GAP, assess
+    have = set(Store.load().metrics())
+    for row in assess(Store.load(), Watchlist.load()):
+        if row.status != GAP:
+            assert all(m in have for m in row.area.metrics), row.area.name
+    assert any(a.metrics and set(a.metrics) - have for a in AREAS) is False
+
+
+def test_macro_reports_as_a_gap_rather_than_a_guess():
+    from cre_agent.coverage import GAP, assess
+    macro = [r for r in assess(Store.load(), Watchlist.load()) if r.area.n == 6][0]
+    assert macro.status == GAP and macro.surfaced_by == "not surfaced"
 
 
 if __name__ == "__main__":

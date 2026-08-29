@@ -694,3 +694,31 @@ The reasoning record, not the execution record. The two evidence classes, the su
 rule, the finding that the north-star sentence cited a £71 Savills never published, and the
 four corrections in Reviewer Concerns all stand and are what the slide draws on. The
 sibling's `REVISED SEQUENCE` is now the only execution plan.
+
+---
+
+## CLOSED 2026-08-29
+
+The other session finished its sequence on goal 3 rather than the join, so the join was
+still unbuilt at 11:45. It is built now, against the resolutions recorded above.
+
+| Ceded above | Outcome |
+|---|---|
+| Block 1 — `Match`, `Scope`, `lens.py` | Built as `Signal.match_reasons` / `match_actions`, two `dict[str, str]`. No `lens.py`, no dataclass in the tool payload, `a.name in s.affected` still works — the sibling's resolution, honoured |
+| Block 2 — F3 via `pipeline_to_2029` | `supply_shock` matches on `("2026-07", "2029-12")`, read off `Period.raw`. Names Mayfair House and Clerkenwell Works; 120 Fenchurch Street correctly excluded on its 2031-06 expiry |
+| Block 3 — `submarket_divergence` | Not built. Area 5 reads `on request` in the coverage table rather than claiming a detector it does not have |
+| Block 4 — named comparable | Not built. The suppression rule is stated in the README instead, which is the fallback this document specified |
+| Block 5 — `scripts/coverage.py` | Built. Eight areas, status derived from the store and the registry, into the README |
+| Block 6 — gilt spread | Cut. Area 6 reads `gap` and the README says why: it is the one number that would have arrived with weaker provenance than everything beside it |
+| Block 7 — tests | `tests/test_watchlist_join.py`, 23 cases. 72 across four files, all green |
+
+All four carry-forwards landed: two figures per building and never their sum; every level
+test is `is not None`; the verb comes from `ACTIONS` in Python, with `monitor` absent and
+asserted absent; no comparable attaches anywhere.
+
+Verified, not assumed: `20/20` then `23/23` on the new suite with the other three
+unchanged, the seed diffed record-by-record before anything was built (47 facts and 17
+events unchanged, one field promoted out of a sourced note), and a cold keyless
+`streamlit run` returning HTTP 200 with no exception in the server log.
+
+Still open, and not code: the slides.

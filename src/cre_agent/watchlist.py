@@ -51,9 +51,15 @@ class Asset:
     submarket: str
     grade: str | None = None
     sqft: int | None = None
+    year_built: int | None = None   # feeds the peer matcher's age band; an
+                                    # asset without one skips that rule, and
+                                    # the comparison says so
     lease_expiry: str | None = None
     break_date: str | None = None
     passing_rent_psf: float | None = None
+    # The asset's own valuation in £/m², the like-for-like input to the peer
+    # street comparison (comps C-3). Fictional wherever the asset is.
+    rateable_value_psm: float | None = None
     epc_rating: str | None = None
     note: str | None = None
 
