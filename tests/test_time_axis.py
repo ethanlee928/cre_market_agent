@@ -219,6 +219,43 @@ def test_supply_shock_prints_its_own_year():
     assert "in 2028" in signal.detail, signal.detail
 
 
+def test_get_pair_never_pairs_on_a_building_level_fact():
+    """find() defaults building="__any__", so a building's figure could land
+    in a market-level pair and the dict comprehension would keep whichever
+    came last. get() defaults building=None for exactly this reason."""
+    store = Store([
+        fact("grade_a_rent_avg", "2026H1", 76.0, unit="gbp_psf"),
+        fact("grade_a_rent_avg", "2026H1", 999.0, unit="gbp_psf",
+             building="One Test Tower"),
+        fact("grade_b_rent_avg", "2026H1", 45.0, unit="gbp_psf"),
+    ], [], [SRC])
+    a, b = store.get_pair("grade_a_rent_avg", "grade_b_rent_avg", "City")
+    assert a.building is None and a.value == 76.0, f"paired on {a.building}"
+
+
+def test_supply_shock_omits_unpublished_extras_rather_than_printing_zero():
+    """prelet_pct and schemes are optional on the fact.
+
+    Two reads defaulted to 0, which renders an unpublished figure as a
+    published zero -- "across 0 schemes, 0% pre-let" reads as sourced and is
+    invented. The third had no default at all and raised TypeError on None,
+    inside the detect_all that app.py runs in its cached loader, so one
+    missing field took the whole brief page down.
+    """
+    store = Store([
+        fact("completions_forecast", "2026", 7_700_000, submarket="Central London",
+             unit="sqft", extras={"prelet_pct": 35.0}),
+        fact("under_construction", "2026H1", 16_100_000, submarket="Central London",
+             unit="sqft"),
+        fact("pipeline_to_2029", "2026H2-2029", 22_000_000,
+             submarket="Central London", unit="sqft"),
+    ], [], [SRC])
+    detail = supply_shock(store)[0].detail
+    assert "0 schemes" not in detail and "0% pre-let" not in detail, detail
+    assert detail.count("not published") == 2, detail
+    assert "16,100,000 sq ft" in detail and "22,000,000 sq ft" in detail
+
+
 def test_supply_shock_labels_under_construction_period():
     """Two facts, two measurement dates; the prose must not merge them."""
     store = Store([

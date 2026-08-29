@@ -31,9 +31,11 @@ BADGE = {"RISK": "🔴", "WATCH": "🟠", "OPPORTUNITY": "🟢"}
 
 
 # --------------------------------------------------------------------------
-# Cached resources. Session state schema is declared here, not discovered
-# later, because Streamlit reruns the whole script on every interaction and
-# anything not in session_state is wiped.
+# Cached resources, and the session state the conversation needs on every
+# rerun: Streamlit re-executes the whole script on each interaction, so
+# anything not in session_state is wiped. (`pending` is deliberately absent
+# -- the seeded-question handler below tests for it, so it must not exist
+# until a button sets it.)
 # --------------------------------------------------------------------------
 
 @st.cache_resource

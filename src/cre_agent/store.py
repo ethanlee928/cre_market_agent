@@ -641,8 +641,12 @@ class Store:
         fabricated number that no source supports. Any detector differencing
         two metrics must come through here.
         """
-        a = {f.period: f for f in self.find(metric_a, submarket, sector=sector)}
-        b = {f.period: f for f in self.find(metric_b, submarket, sector=sector)}
+        # building=None, matching get()'s default: a market-level pair must
+        # never pick up a building's figure, and find() defaults to "__any__".
+        a = {f.period: f for f in self.find(metric_a, submarket, sector=sector,
+                                            building=None)}
+        b = {f.period: f for f in self.find(metric_b, submarket, sector=sector,
+                                            building=None)}
         shared = set(a) & set(b)
         if not shared:
             return None

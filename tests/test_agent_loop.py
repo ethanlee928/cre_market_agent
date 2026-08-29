@@ -190,6 +190,56 @@ def test_ambiguous_lookup_surfaces_as_error_not_crash():
     assert out["error"] == "ambiguous" and "disambiguate" in out["message"]
 
 
+def test_sector_echo_round_trips_to_the_all_sector_total():
+    """get_metric answers a sector-free fact with sector="all sectors".
+
+    That label is not a sector name, so handing it back -- which the model
+    does, having just been given it -- looked up nothing and reported the
+    total missing. A false "this source publishes no take_up" about a figure
+    sitting in the store is the honesty rule failing in the one direction
+    that looks like honesty.
+    """
+    agent = tool_agent()
+    echoed = agent._run_tool("get_metric", {"metric": "take_up",
+                                            "submarket": "Central London",
+                                            "sector": "all sectors"})
+    omitted = agent._run_tool("get_metric", {"metric": "take_up",
+                                             "submarket": "Central London"})
+    assert echoed["found"] is True, echoed
+    assert echoed["value"] == omitted["value"]
+    assert echoed["period"] == omitted["period"]
+
+
+def test_unknown_sector_names_itself_rather_than_claiming_no_data():
+    """A sector this source does not carry and a figure it does not publish
+    are different answers, the same distinction get_metric already draws for
+    submarkets."""
+    out = tool_agent()._run_tool("get_metric", {"metric": "take_up",
+                                                "submarket": "Central London",
+                                                "sector": "Fishing"})
+    assert out["found"] is False
+    assert "not a sector" in out["message"]
+    assert "Tech & Media" in out["message"], "name the ones it does carry"
+
+
+def test_find_market_activity_rejects_an_undeclared_filter():
+    """Model-authored args reach a kwargs splat. An undeclared key used to
+    come back as a raw TypeError, which the model cannot act on."""
+    out = tool_agent()._run_tool("find_market_activity", {"building": "Eden"})
+    assert out["error"] == "unknown_argument"
+    assert "min_sqft" in out["message"], "say what it does take"
+
+
+def test_find_market_activity_coerces_and_refuses_min_sqft():
+    """A numeric string is what the model actually sends; a word is not."""
+    agent = tool_agent()
+    ok = agent._run_tool("find_market_activity", {"min_sqft": "50000"})
+    bad = agent._run_tool("find_market_activity", {"min_sqft": "big"})
+    assert ok["count"] == agent._run_tool(
+        "find_market_activity", {"min_sqft": 50000})["count"]
+    assert bad["error"] == "bad_argument"
+
+
 # -- the eval graders: offline, so the live harness can be trusted ----------
 
 def test_grader_million_expansion_matches_full_form():
@@ -260,6 +310,20 @@ def test_grader_action_verb_uses_the_closed_vocabulary():
     assert graders.action_verb("Re-price it against the Grade A average.")
     assert not graders.action_verb("Keep monitoring the situation.")
     assert graders.forbidden("Keep monitoring it.", [r"\bmonitor"]) == [r"\bmonitor"]
+
+
+def test_grader_action_verb_is_whole_words_not_substrings():
+    """"hold" inside "holdings" satisfied the decision gate.
+
+    This portfolio is called the Nan Fung holdings, so the substring test
+    passed almost every answer about it -- vacuous on exactly the answers the
+    check exists to grade.
+    """
+    assert not graders.action_verb("Nan Fung holdings in the City are stable.")
+    assert not graders.action_verb("The holding at Regent Quarter is large.")
+    assert graders.action_verb("Hold, and here is why.")
+    assert graders.action_verb("Defer capex until the EPC is fixed.")
+    assert graders.action_verb("Start the conversation with the tenant.")
 
 
 def test_grader_called_matches_args_and_alternatives():

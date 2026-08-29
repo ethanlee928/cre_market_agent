@@ -18,7 +18,11 @@ if not os.getenv("GOOGLE_API_KEY"):
 
 from google import genai  # noqa: E402
 
-client = genai.Client()
+# Explicit, for the same reason as gemini.py and smoke_test.py: a bare
+# Client() also honours GEMINI_API_KEY and GOOGLE_GENAI_USE_VERTEXAI, so it
+# could list models for credentials the app will never use -- in the one
+# script whose whole job is pinning a model ID against the real key.
+client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
 
 print(f"{'model id':<40} {'in':>9} {'out':>8}  methods")
 print("-" * 90)

@@ -111,7 +111,11 @@ def main() -> int:
     ap.add_argument("--case", help="run only this case id")
     args = ap.parse_args()
 
-    if not (os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")):
+    # GOOGLE_API_KEY only: Agent.__init__ reads that one name, deliberately
+    # (a bare Client() would also honour GEMINI_API_KEY). Accepting the other
+    # spelling here passes the guard and then fails every case with "no
+    # GOOGLE_API_KEY set" from inside the loop.
+    if not os.getenv("GOOGLE_API_KEY"):
         print("No GOOGLE_API_KEY set, so the live evals cannot run. Add one to "
               ".env — the offline suite (tests/) needs no key.")
         return 1

@@ -223,22 +223,37 @@ def supply_shock(store: Store, watchlist=None) -> list[Signal]:
         + f", and only {prelet:.0f}% of it is pre-let. "
     )
     if uc:
-        uc_prelet = uc.extras.get("prelet_pct")
         # Under construction is measured at its own period, which need not be
         # the forecast year. Say which, rather than implying they are the same.
+        #
+        # prelet_pct is optional on the fact, and E-4 applies to an extra the
+        # same as to a level: unpublished is absent, not zero. Formatting it
+        # unguarded also raised TypeError on None, inside the detect_all that
+        # app.py runs in its cached loader -- one missing field would have
+        # taken the whole brief page down, not just this sentence.
+        uc_prelet = uc.extras.get("prelet_pct")
         detail += (
-            f"A further {uc.render_value()} was under construction at {uc.period} "
-            f"with {uc_prelet:.0f}% pre-let. "
+            f"A further {uc.render_value()} was under construction at {uc.period}"
+            + (f" with {uc_prelet:.0f}% pre-let. " if uc_prelet is not None
+               else ", with the pre-let share not published. ")
         )
     detail += "New Grade A space arriving unlet puts pressure on headline rents and incentives."
 
+    # Same rule for both extras. A `.get(name, 0)` default renders an
+    # unpublished figure as a published zero -- "across 0 schemes, 0% pre-let"
+    # reads as sourced and is invented, which is the defect the store exists
+    # to prevent. Bound here rather than inside the block below, because the
+    # match reason further down reads pipeline_prelet too.
+    schemes = pipeline.extras.get("schemes") if pipeline else None
+    pipeline_prelet = pipeline.extras.get("prelet_pct") if pipeline else None
+
     window = _pipeline_window(pipeline) if pipeline else None
     if window and pipeline:
-        detail += (
-            f" Over {pipeline.period} the pipeline runs to {pipeline.render_value()} "
-            f"across {pipeline.extras.get('schemes', 0):.0f} schemes, "
-            f"{pipeline.extras.get('prelet_pct', 0):.0f}% pre-let."
-        )
+        detail += f" Over {pipeline.period} the pipeline runs to {pipeline.render_value()}"
+        if schemes is not None:
+            detail += f" across {schemes:.0f} schemes"
+        detail += (f", {pipeline_prelet:.0f}% pre-let." if pipeline_prelet is not None
+                   else ", with the pre-let share not published.")
 
     sig = Signal(
         id="supply_shock:Central London",
@@ -260,8 +275,10 @@ def supply_shock(store: Store, watchlist=None) -> list[Signal]:
             sig.match_reasons[asset.name] = (
                 f"its {kind} at {event} falls inside the {pipeline.period} delivery "
                 f"window, so this is the market it would be re-letting into, against "
-                f"{pipeline.render_value()} of new space that is "
-                f"{pipeline.extras.get('prelet_pct', 0):.0f}% pre-let."
+                f"{pipeline.render_value()} of new space"
+                + (f" that is {pipeline_prelet:.0f}% pre-let."
+                   if pipeline_prelet is not None
+                   else " whose pre-let share this source does not publish.")
             )
             sig.match_actions[asset.name] = "start the conversation"
     return [sig]

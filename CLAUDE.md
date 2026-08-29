@@ -152,10 +152,11 @@ against nanfung.com and trade press). Rent-roll fields deliberately absent.
 
 ## Tests
 
-Six plain scripts, no runner, no API key, no network. 123 tests.
+Six plain scripts, no runner, no API key, no network. 130 tests.
 `for t in tests/test_*.py; do uv run python "$t"; done`
 
-`test_time_axis` (19) the store and the time axis · `test_submarket_resolution`
+`test_time_axis` (21) the store and the time axis, and that a detector
+omits an unpublished extra rather than printing it as zero · `test_submarket_resolution`
 (18) aliases resolve up, events match down · `test_sector_demand` (12) trailing
 against leading · `test_watchlist_join` (23) lease windows, reversion (synthetic
 fixtures — the real portfolio carries no rent roll), the E-4 trap, and that the
@@ -163,12 +164,14 @@ coverage table resolves every claim it makes · `test_peer_comps`
 (29) the peer matcher's bands and reasons, the three refusal floors, the pinned
 £/m² constant, like-for-like verdicts, the own-valuation-from-store rule,
 self-exclusion from peer sets, and that chat and brief share one code
-path · `test_agent_loop` (22)
+path · `test_agent_loop` (27)
 `ask()` driven by a fake client returning real `google.genai.types` objects — the
 final answer enters history, MAX_TURNS reports instead of looping, the missing-key
 guard degrades (automated; the hand check that used to live here is now
-`test_missing_key_yields_error_not_traceback`) — plus `_run_tool` dispatch and the
-eval graders.
+`test_missing_key_yields_error_not_traceback`) — plus `_run_tool` dispatch, the
+tool-argument trust boundary (an undeclared filter and a bogus sector name each
+name themselves rather than failing as a raw TypeError or a false "no data"), and
+the eval graders.
 
 ## Evals
 

@@ -132,9 +132,15 @@ def figures_sourced(answer: str, allowed: set[float],
 
 
 def action_verb(answer: str) -> bool:
-    """Does the answer close on a verb from the closed vocabulary?"""
+    """Does the answer close on a verb from the closed vocabulary?
+
+    Whole words only. A substring test passed any answer containing
+    "holdings" -- which is what this portfolio is called -- so the check was
+    close to vacuous on the answers it most needed to grade.
+    """
     norm = answer.lower().replace("-", "")
-    return any(a.replace("-", "") in norm for a in ACTIONS)
+    return any(re.search(rf"\b{re.escape(a.replace('-', ''))}\b", norm)
+               for a in ACTIONS)
 
 
 def forbidden(answer: str, patterns: list[str]) -> list[str]:
