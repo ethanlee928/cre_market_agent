@@ -15,7 +15,7 @@ Two review findings shape this file:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import MISSING, dataclass, fields
 from pathlib import Path
 
 import yaml
@@ -24,6 +24,10 @@ import yaml
 # need it too. Imported here for this module's own use, and re-exported so
 # existing `from .watchlist import SubmarketIndex` imports keep working.
 from .submarkets import CONFIG_DIR, SubmarketIndex
+
+
+class WatchlistSchemaError(ValueError):
+    """Raised when watchlist.yaml carries a field an Asset cannot accept."""
 
 
 def parse_ym(value: str) -> tuple[int, int]:
@@ -89,6 +93,39 @@ class Asset:
         return " · ".join(bits)
 
 
+def _asset(row: dict, n: int, path: Path) -> Asset:
+    """One Asset, or a message naming the field that is wrong.
+
+    `Asset(**row)` raised a bare TypeError -- "unexpected keyword argument
+    'passing_rent'" -- naming no file, no line and no fix. This is the one
+    file the README asks a non-technical user to edit, and app.py loads it at
+    module scope, so a single mistyped key took down the brief, the sidebar
+    and chat behind a Streamlit traceback.
+
+    Still fails loud: a watchlist that half-loads is a portfolio silently
+    missing a building, which is worse. Same discipline as
+    store.SeedSchemaError, and the same duty to say where and what to do.
+    """
+    if not isinstance(row, dict):
+        raise WatchlistSchemaError(
+            f"{path.name}: asset {n} is a {type(row).__name__}, not a mapping. "
+            f"Each entry under `assets:` needs at least `name:` and "
+            f"`submarket:`.")
+
+    known = {f.name for f in fields(Asset)}
+    where = f"{path.name}: asset {n} ({row.get('name') or 'unnamed'})"
+    if unknown := sorted(set(row) - known):
+        raise WatchlistSchemaError(
+            f"{where} has unrecognised field(s) {unknown}. Valid fields are "
+            f"{sorted(known)}. Rent-roll fields are deliberately optional -- "
+            f"omit one rather than guessing it.")
+    if missing := sorted(f.name for f in fields(Asset)
+                         if f.default is MISSING and f.name not in row):
+        raise WatchlistSchemaError(
+            f"{where} is missing required field(s) {missing}.")
+    return Asset(**row)
+
+
 class Watchlist:
     def __init__(self, assets: list[Asset], index: SubmarketIndex, label: str = ""):
         self.assets = assets
@@ -103,7 +140,8 @@ class Watchlist:
         if not path.exists():
             return cls([], index)
         raw = yaml.safe_load(path.read_text()) or {}
-        assets = [Asset(**a) for a in raw.get("assets", [])]
+        assets = [_asset(row, n, path)
+                  for n, row in enumerate(raw.get("assets", []) or [], 1)]
         return cls(assets, index, raw.get("label", ""))
 
     def __len__(self) -> int:

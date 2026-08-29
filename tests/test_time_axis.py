@@ -96,6 +96,84 @@ def test_multi_quarter_load_does_not_crash():
 
 
 # --------------------------------------------------------------------------
+# E-10: which source wins an identity collision
+# --------------------------------------------------------------------------
+
+def _collide(names_dates_values) -> Store:
+    """Two sources publishing the same (metric, submarket, period)."""
+    d = Path(tempfile.mkdtemp())
+    paths = [seed(d / name, published,
+                  [{"metric": "vacancy_rate", "submarket": "City",
+                    "period": "2026Q2", "value": value, "unit": "pct"}])
+             for name, published, value in names_dates_values]
+    return Store.load(sorted(paths))
+
+
+def test_newer_source_wins_a_collision_from_behind():
+    """The failing case: the stale file sorts first by filename.
+
+    load() globs `sorted(...)`, and the dedupe was a set, so the incumbent
+    was whichever name came first alphabetically. A 2020 figure outranked a
+    2026 one because of a letter.
+    """
+    f = _collide([("seed_aaa.json", "2020-01-01", 99.0),
+                  ("seed_zzz.json", "2026-08-06", 7.7)]).get("vacancy_rate", "City")
+    assert f.value == 7.7, "the newer source must win regardless of filename"
+    assert f.source.published == "2026-08-06"
+
+
+def test_newer_source_still_wins_from_the_front():
+    """The mirror image, so the test cannot pass by always taking the last."""
+    f = _collide([("seed_aaa.json", "2026-08-06", 7.7),
+                  ("seed_zzz.json", "2020-01-01", 99.0)]).get("vacancy_rate", "City")
+    assert f.value == 7.7
+    assert f.source.published == "2026-08-06"
+
+
+def test_equal_dates_keep_the_incumbent():
+    """Ties stay in filename order, so two loads always agree."""
+    a = _collide([("seed_aaa.json", "2026-01-01", 1.0),
+                  ("seed_zzz.json", "2026-01-01", 2.0)]).get("vacancy_rate", "City")
+    b = _collide([("seed_aaa.json", "2026-01-01", 1.0),
+                  ("seed_zzz.json", "2026-01-01", 2.0)]).get("vacancy_rate", "City")
+    assert a.value == b.value == 1.0
+
+
+def test_collision_does_not_double_count():
+    """Precedence replaces in place; it must not also append (H5)."""
+    store = _collide([("seed_aaa.json", "2020-01-01", 99.0),
+                      ("seed_zzz.json", "2026-08-06", 7.7)])
+    assert len(store.find("vacancy_rate", "City")) == 1
+
+
+def test_a_newer_roster_row_replaces_an_older_one():
+    """Buildings carry the same rule: a re-harvest is the newer reading."""
+    d = Path(tempfile.mkdtemp())
+    for name, published, sqft in (("seed_aaa.json", "2020-01-01", 111_111),
+                                  ("seed_zzz.json", "2026-08-06", 222_222)):
+        (d / name).write_text(json.dumps({
+            "source": {"publisher": "Test", "title": f"Roster {published}",
+                       "published": published, "url": "https://example.invalid"},
+            "buildings": [{"name": "One Test Plaza", "submarket": "City",
+                           "sqft": sqft}]}))
+    roster = Store.load(sorted(d.glob("seed_*.json"))).buildings
+    assert len(roster) == 1, "one building, not two"
+    assert roster[0].sqft == 222_222
+
+
+def test_the_shipped_seeds_do_not_collide():
+    """Precedence is a guard, not a crutch. Nine real files, no overlap."""
+    seen = set()
+    for path in sorted((Path(__file__).resolve().parents[1] / "data")
+                       .glob("seed_*.json")):
+        for row in json.loads(path.read_text()).get("facts", []):
+            key = (row.get("metric"), row.get("submarket"), row.get("period"),
+                   row.get("sector"), row.get("building"))
+            assert key not in seen, f"{path.name} collides on {key}"
+            seen.add(key)
+
+
+# --------------------------------------------------------------------------
 # Year-bearing field names
 # --------------------------------------------------------------------------
 

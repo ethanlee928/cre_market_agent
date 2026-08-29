@@ -326,6 +326,38 @@ class AmbiguousQuery(LookupError):
     """E-3: a scalar lookup matched more than one fact. Refuse, never guess."""
 
 
+def _admit(items: list, seen: dict, key, item,
+           published: Callable[[object], str]) -> bool:
+    """Add `item` under `key`, or let it displace a staler one already there.
+
+    E-10: this dedupe was a set, which answers "have I seen this identity?"
+    and nothing else, so the loader kept whichever file it read first -- and
+    load() reads `sorted(DATA_DIR.glob("seed_*.json"))`, which makes the
+    winner alphabetical by filename. Nothing in this repo collides yet, so it
+    never fired. The moment a second provider publishes a metric Savills
+    already carries -- which is the stated roadmap, one seed file per source
+    -- a 2020 figure would have outranked a 2026 one because its filename
+    started with an earlier letter, under a sidebar banner reading
+    "Data as of" the newest source's date.
+
+    Recency decides instead, off each source's own `published` date. Ties keep
+    the incumbent, so equal-dated files stay in filename order and two loads
+    of the same directory always agree. Replacement is in place, so the list
+    keeps first-appearance order either way.
+
+    This settles precedence, not provenance: the winning Fact carries its own
+    Source, so whatever survives here still cites the file it came from.
+    """
+    if (idx := seen.get(key)) is None:
+        seen[key] = len(items)
+        items.append(item)
+        return True
+    if published(item) > published(items[idx]):
+        items[idx] = item
+        return True
+    return False
+
+
 # --------------------------------------------------------------------------
 # Store
 # --------------------------------------------------------------------------
@@ -356,8 +388,11 @@ class Store:
         events: list[dict] = []
         sources: list[Source] = []
         buildings: list[Building] = []
-        seen: set[tuple] = set()
-        seen_buildings: set[str] = set()
+        # E-10: identity -> index into the list, not a bare set. A set answers
+        # "have I seen this?" and the loop then kept whichever file it read
+        # first, which is alphabetical filename order. See _admit.
+        seen: dict[tuple, int] = {}
+        seen_buildings: dict[str, int] = {}
 
         for path in paths:
             raw = json.loads(path.read_text())
@@ -373,10 +408,7 @@ class Store:
                 # metric collide and the second one silently drops.
                 key = (fact.metric, fact.submarket, str(fact.period),
                        fact.sector, fact.building)
-                if key in seen:
-                    continue
-                seen.add(key)
-                facts.append(fact)
+                _admit(facts, seen, key, fact, lambda f: f.source.published)
 
             for ev in raw.get("events", []):
                 events.append({**ev, "_source": src})
@@ -389,10 +421,10 @@ class Store:
                         f"store.py."
                     )
                 b = Building(source=src, **row)
-                if b.name in seen_buildings:
-                    continue
-                seen_buildings.add(b.name)
-                buildings.append(b)
+                # Same precedence rule as facts: a re-harvested roster row is
+                # the newer reading of the same building.
+                _admit(buildings, seen_buildings, b.name, b,
+                       lambda x: x.source.published)
 
             # Sector tables become ordinary Facts. They are take-up
             # measurements carrying a sector, and Fact already treats sector as
@@ -421,10 +453,8 @@ class Store:
                         src, path.name)
                     key_id = (fact.metric, fact.submarket, str(fact.period),
                               fact.sector, fact.building)
-                    if key_id in seen:
-                        continue
-                    seen.add(key_id)
-                    facts.append(fact)
+                    _admit(facts, seen, key_id, fact,
+                           lambda f: f.source.published)
 
             if unknown:
                 raise SeedSchemaError(

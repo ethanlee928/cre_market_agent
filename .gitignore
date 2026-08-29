@@ -8,3 +8,4 @@ evals/runs/
 *.egg-info/
 .claude/
 docs/
+.DS_Store

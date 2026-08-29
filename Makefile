@@ -1,9 +1,3 @@
-# London Office Market Monitor — container tasks.
-
-# Docker 20.10 ships BuildKit but does not enable it by default, and the
-# Dockerfile's cache and bind mounts require it. Newer Docker ignores this.
-export DOCKER_BUILDKIT := 1
-
 IMAGE ?= cre-market-agent
 NAME  ?= cre-market-agent
 PORT  ?= 8501

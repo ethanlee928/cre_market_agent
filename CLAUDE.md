@@ -152,14 +152,17 @@ against nanfung.com and trade press). Rent-roll fields deliberately absent.
 
 ## Tests
 
-Six plain scripts, no runner, no API key, no network. 130 tests.
+Six plain scripts, no runner, no API key, no network. 143 tests.
 `for t in tests/test_*.py; do uv run python "$t"; done`
 
-`test_time_axis` (21) the store and the time axis, and that a detector
-omits an unpublished extra rather than printing it as zero · `test_submarket_resolution`
+`test_time_axis` (27) the store and the time axis, that a detector
+omits an unpublished extra rather than printing it as zero, and E-10 source
+precedence (the newer `published` wins an identity collision, from either side
+of the filename sort) · `test_submarket_resolution`
 (18) aliases resolve up, events match down · `test_sector_demand` (12) trailing
-against leading · `test_watchlist_join` (23) lease windows, reversion (synthetic
-fixtures — the real portfolio carries no rent roll), the E-4 trap, and that the
+against leading · `test_watchlist_join` (30) lease windows, reversion (synthetic
+fixtures — the real portfolio carries no rent roll), the E-4 trap, that a mistyped yaml key names itself
+rather than raising a bare TypeError, and that the
 coverage table resolves every claim it makes · `test_peer_comps`
 (29) the peer matcher's bands and reasons, the three refusal floors, the pinned
 £/m² constant, like-for-like verdicts, the own-valuation-from-store rule,
