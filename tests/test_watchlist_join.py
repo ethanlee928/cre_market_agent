@@ -14,6 +14,8 @@ Run:  uv run python tests/test_watchlist_join.py     (or pytest)
 from __future__ import annotations
 
 import sys
+import tempfile
+import textwrap
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -21,7 +23,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from cre_agent.signals import (ACTIONS, _pipeline_window, _reversion, detect_all,
                                quality_spread, supply_shock)
 from cre_agent.store import Store
-from cre_agent.watchlist import Asset, SubmarketIndex, Watchlist, parse_ym
+from cre_agent.watchlist import (Asset, SubmarketIndex, Watchlist,
+                                 WatchlistSchemaError, parse_ym)
 
 WINDOW = ("2026-07", "2029-12")
 
@@ -33,6 +36,88 @@ def wl(*assets: Asset) -> Watchlist:
 def asset(**kw) -> Asset:
     base = dict(name="X", submarket="City Fringe", grade="B", sqft=10_000)
     return Asset(**(base | kw))
+
+
+# -- a user typo names itself ------------------------------------------------
+# config/watchlist.yaml is the one file the README asks a non-technical user
+# to edit, and app.py loads it at module scope, so a bare TypeError out of
+# Asset(**row) took the whole brief down behind a traceback naming no file,
+# no line and no fix.
+
+def _yaml(body: str) -> Path:
+    path = Path(tempfile.mkdtemp()) / "watchlist.yaml"
+    path.write_text(textwrap.dedent(body))
+    return path
+
+
+def _refused(body: str) -> str:
+    try:
+        Watchlist.load(_yaml(body))
+    except WatchlistSchemaError as e:
+        return str(e)
+    raise AssertionError("expected a WatchlistSchemaError")
+
+
+def test_unknown_field_names_itself_and_the_valid_ones():
+    msg = _refused("""
+        assets:
+          - {name: Some House, submarket: City, passing_rent: 62.5}
+    """)
+    assert "passing_rent" in msg, "the message must name the offending key"
+    assert "passing_rent_psf" in msg, "and the field the user meant"
+    assert "watchlist.yaml" in msg and "Some House" in msg
+
+
+def test_missing_required_field_names_itself():
+    msg = _refused("""
+        assets:
+          - {submarket: City, sqft: 100000}
+    """)
+    assert "name" in msg and "missing" in msg.lower()
+
+
+def test_a_bare_string_asset_is_refused_not_splatted():
+    msg = _refused("""
+        assets:
+          - Some House
+    """)
+    assert "not a mapping" in msg
+
+
+def test_a_typo_never_degrades_to_a_silently_shorter_portfolio():
+    """Fail loud, not partial: a half-loaded watchlist is a holding missing
+    from the brief with nothing on screen saying so."""
+    try:
+        Watchlist.load(_yaml("""
+            assets:
+              - {name: Good House, submarket: City}
+              - {name: Bad House, submarket: City, passing_rent: 1}
+        """))
+    except WatchlistSchemaError as e:
+        assert "Bad House" in str(e)
+    else:
+        raise AssertionError("one bad row must not load as a one-asset portfolio")
+
+
+def test_a_valid_watchlist_still_loads():
+    w = Watchlist.load(_yaml("""
+        label: Mine
+        assets:
+          - {name: Some House, submarket: City, sqft: 100000, passing_rent_psf: 62.5}
+    """))
+    assert len(w) == 1 and w.label == "Mine"
+    assert w.assets[0].passing_rent_psf == 62.5
+
+
+def test_an_absent_or_empty_file_is_still_the_empty_watchlist():
+    """The zero-state is a hard requirement; validation must not break it."""
+    assert len(Watchlist.load(Path(tempfile.mkdtemp()) / "nope.yaml")) == 0
+    assert len(Watchlist.load(_yaml(""))) == 0
+    assert len(Watchlist.load(_yaml("label: Mine\nassets:\n"))) == 0
+
+
+def test_the_shipped_watchlist_loads():
+    assert len(Watchlist.load()) == 5
 
 
 # -- the window is read off the published period ----------------------------
