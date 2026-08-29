@@ -71,17 +71,22 @@ no "great question", no bullet-point dumps unless asked. Two or three sentences
 usually does it.
 
 CONTEXT. The fact store holds Savills Central London Office Market Watch data,
-plus Canary Wharf submarket figures and a Canary Wharf building roster from
+plus Canary Wharf and City of London building rosters with VOA valuations from
 separate sources (each figure carries its own). The user's watchlist holds
-their own assets, which may be empty. When a market fact touches one of their
-assets, say so explicitly, because that is the whole point of the tool.
+their own assets, which may be empty. The default watchlist is the real London
+portfolio of Nan Fung Group, held through Endurance Land: real buildings whose
+identity, size and valuation come from public sources. Their rent roll (passing
+rents, lease dates) is NOT public and is not on file — when asked about
+reversion or lease events, say the rent roll is not on file rather than
+estimating. When a market fact touches one of their assets, say so explicitly,
+because that is the whole point of the tool.
 
 For any "this building vs that", "value for money" or "aligned with the
 market" question about a specific holding, call compare_building. Its figures,
 verdict and action verb are computed in Python and match the brief on screen;
-use them as they stand. Its roster covers Canary Wharf only, and its refusals
-(thin peer set, no roster, unpublished valuations) are correct answers: relay
-them rather than filling the gap from memory.
+use them as they stand. Rosters cover the City Core corridors and Canary Wharf
+only, and its refusals (thin peer set, no roster, unpublished valuations) are
+correct answers: relay them rather than filling the gap from memory.
 """
 
 
@@ -144,9 +149,9 @@ def _declarations() -> list[types.FunctionDeclaration]:
                 "Compare one watchlist asset against named peer buildings of "
                 "similar size and age in its submarket: per-peer VOA valuation, "
                 "reported peer letting rents, the medians, the gap to passing "
-                "rent, and the computed decision verb. The roster covers "
-                "Canary Wharf only; elsewhere this refuses and says why, and "
-                "that refusal is the answer to give."
+                "rent, and the computed decision verb. Rosters cover the City "
+                "Core corridors and Canary Wharf only; elsewhere this refuses "
+                "and says why, and that refusal is the answer to give."
             ),
             parameters=S(type=T.OBJECT, properties={
                 "asset": S(type=T.STRING, description="A watchlist asset name exactly as get_watchlist returns it"),
@@ -154,10 +159,11 @@ def _declarations() -> list[types.FunctionDeclaration]:
         ),
         types.FunctionDeclaration(
             name="get_watchlist",
-            description=("The user's own assets: submarket, grade, size, lease "
-                         "expiry, break date, passing rent and EPC rating. The "
-                         "holdings are illustrative and labelled fictional; the "
-                         "market figures they are compared against are not."),
+            description=("The user's own assets: submarket, grade, size and "
+                         "EPC rating, plus lease and rent fields where the "
+                         "user has supplied them. The default holdings are "
+                         "real Nan Fung Group buildings from public sources; "
+                         "their rent roll is not public and is not on file."),
             parameters=S(type=T.OBJECT, properties={}),
         ),
     ]
@@ -285,7 +291,13 @@ class Agent:
                 return {
                     "found": True,
                     "asset": asset.name,
-                    "asset_is_fictional": True,
+                    "asset_value_source":
+                        "VOA 2026 rating list, same list as the peers"
+                        if c.asset_value_from_store else
+                        ("user-supplied figure from the watchlist, not a "
+                         "published valuation"
+                         if c.asset_value_psm is not None else
+                         "no valuation on file"),
                     "submarket": asset.submarket,
                     "passing_rent_psf": asset.passing_rent_psf,
                     "peers": c.rows,
@@ -334,7 +346,19 @@ class Agent:
             if name == "get_watchlist":
                 return {"label": self.watchlist.label,
                         "count": len(self.watchlist),
-                        "fictional": True,
+                        "note": ("Real holdings from public sources. Rent-roll "
+                                 "fields (lease_expiry, break_date, "
+                                 "passing_rent_psf) are null unless the user "
+                                 "supplied them: not public, not estimated."),
+                        # The eval caught a summed "portfolio total sq ft" --
+                        # derived, and arithmetically wrong. Same closed-set
+                        # rule as compare_building's arithmetic_note.
+                        "arithmetic_note": (
+                            "Quote these fields as returned, per asset. Do "
+                            "not sum floor areas into a portfolio total or "
+                            "derive any other cross-asset figure -- no "
+                            "aggregate is computed here, so none can be "
+                            "quoted."),
                         "assets": [{"name": a.name, "submarket": a.submarket,
                                     "grade": a.grade, "sqft": a.sqft,
                                     "year_built": a.year_built,

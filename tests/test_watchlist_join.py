@@ -100,12 +100,17 @@ def test_empty_watchlist_matches_nothing_and_does_not_raise():
 # -- F3: the defect this fixes ----------------------------------------------
 
 def test_supply_shock_no_longer_claims_every_asset():
-    s = supply_shock(Store.load(), Watchlist.load())[0]
-    # Meridian Quay Tower joined the shipped watchlist with a 2027-12 break,
-    # inside the 2026H2-2029 window, so its claim is justified.
-    assert set(s.affected) == {"Mayfair House", "Clerkenwell Works",
-                               "Meridian Quay Tower"}
-    assert "120 Fenchurch Street" not in s.affected   # expiry 2031-06, outside
+    # The shipped watchlist is the real Nan Fung portfolio, whose rent roll is
+    # not public: no lease events on file, so the delivery-window filter
+    # honestly claims nobody. The F3 defect (a filter on nothing claiming
+    # everyone) is pinned with synthetic leases: only the asset whose break
+    # falls inside 2026H2-2029 may be claimed.
+    assert supply_shock(Store.load(), Watchlist.load())[0].affected == []
+    inside = asset(name="Inside", break_date="2027-12")
+    outside = asset(name="Outside", lease_expiry="2031-06")
+    s = supply_shock(Store.load(), wl(inside, outside))[0]
+    assert s.affected == ["Inside"]
+    assert s.match_reasons["Inside"]
 
 
 def test_every_match_names_a_reason_and_an_action():
@@ -126,12 +131,24 @@ def test_monitor_is_not_a_permitted_action():
 
 # -- the E-4 trap -----------------------------------------------------------
 
+# The reversion arithmetic needs a grade-B asset with a passing rent. The
+# shipped portfolio is real and carries no rent roll, so these fixtures are
+# synthetic by design -- the code path they pin is what lights up the moment
+# a user types their own rents into the yaml.
+
+MAYFAIR_B = dict(name="Mayfair House", submarket="Mayfair", grade="B",
+                 sqft=24_000, passing_rent_psf=82.0, epc_rating="D")
+CLERKENWELL_B = dict(name="Clerkenwell Works", submarket="City Fringe",
+                     grade="B", sqft=38_000, passing_rent_psf=52.0,
+                     epc_rating="C")
+
+
 def test_unpublished_level_states_the_gap_instead_of_asserting_a_figure():
     """West End grade_b_rent_avg is a truthy Fact whose value is None."""
     store = Store.load()
     b = store.get("grade_b_rent_avg", "West End")
     assert b is not None and b.value is None      # truthy, but has no level
-    sig = [s for s in quality_spread(store, Watchlist.load())
+    sig = [s for s in quality_spread(store, wl(asset(**MAYFAIR_B)))
            if s.id == "quality_spread:West End"][0]
     reason = sig.match_reasons["Mayfair House"]
     assert "not the level" in reason
@@ -140,7 +157,7 @@ def test_unpublished_level_states_the_gap_instead_of_asserting_a_figure():
 
 def test_published_level_computes_the_reversion():
     store = Store.load()
-    sig = [s for s in quality_spread(store, Watchlist.load())
+    sig = [s for s in quality_spread(store, wl(asset(**CLERKENWELL_B)))
            if s.id == "quality_spread:City"][0]
     reason = sig.match_reasons["Clerkenwell Works"]
     assert "£240,920" in reason                   # (52.00 - 45.66) * 38,000
@@ -150,7 +167,7 @@ def test_published_level_computes_the_reversion():
 def test_the_two_figures_are_never_presented_as_summable():
     """(passing - B) and (A - passing) sum to the grade gap. Render two, not three."""
     store = Store.load()
-    sig = [s for s in quality_spread(store, Watchlist.load())
+    sig = [s for s in quality_spread(store, wl(asset(**CLERKENWELL_B)))
            if s.id == "quality_spread:City"][0]
     reason = sig.match_reasons["Clerkenwell Works"]
     assert "£240,920" in reason and "£919,980" in reason
@@ -172,10 +189,12 @@ def test_epc_below_c_defers_capex():
 def test_market_wide_brief_is_complete_with_no_watchlist():
     store = Store.load()
     empty = detect_all(store, wl())
-    # One fewer than the full brief: peer_gap compares a HOLDING to its
-    # street, so with no holdings there is honestly nothing to compare --
-    # unlike the market signals, which must all still fire.
-    assert len(empty) == len(detect_all(store, Watchlist.load())) - 1
+    full = detect_all(store, Watchlist.load())
+    # Exactly the peer cards fewer than the full brief: peer_gap compares a
+    # HOLDING to its street, so with no holdings there is honestly nothing to
+    # compare -- unlike the market signals, which must all still fire.
+    peer_cards = [s for s in full if s.id.startswith("peer_gap")]
+    assert len(empty) == len(full) - len(peer_cards)
     assert not [s for s in empty if s.id.startswith("peer_gap")]
     assert all(s.affected == [] for s in empty)
     assert all(s.detail and s.citations() for s in empty)
@@ -184,8 +203,10 @@ def test_market_wide_brief_is_complete_with_no_watchlist():
 def test_large_occupier_squeeze_still_names_its_asset():
     """An unset scope would silently delete a correct pre-existing match."""
     sigs = {s.id: s for s in detect_all(Store.load(), Watchlist.load())}
+    # The three 100,000+ sq ft holdings; 138 Cheapside (80,300) and
+    # 108 Cannon Street (38,800) sit below the squeeze's block size.
     assert sigs["large_occupier_squeeze:Central London"].affected == [
-        "120 Fenchurch Street", "Meridian Quay Tower"]
+        "The Bailey", "99 City Road", "Regent Quarter"]
 
 
 def test_two_consecutive_runs_are_identical():

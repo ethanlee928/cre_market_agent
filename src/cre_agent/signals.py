@@ -485,21 +485,32 @@ def _peer_verdict(asset: Asset, c) -> tuple[Severity, str, str]:
 def _peer_table(asset: Asset, c) -> str:
     """The comparison table, in markdown, every cell computed or refused.
 
-    The asset's own row carries the fictional label: a made-up passing rent
-    sitting beside real buildings' real figures reads as more authoritative
-    than anywhere else it renders, so the label rides in the same row as the
-    number (the honesty guarantee, applied where it is under the most load).
+    The asset's own row labels where its figures come from: a valuation off
+    the same VOA list as the peers' needs no flag, but a figure the user
+    typed into the yaml sits beside real buildings' real figures and reads as
+    more authoritative than anywhere else it renders, so the label rides in
+    the same row as the number (the honesty guarantee, applied where it is
+    under the most load). Passing rents are always the user's own data.
     """
     def cell(v, fmt="{}"):
         return fmt.format(v) if v is not None else "not published"
 
+    if c.asset_value_psm is None:
+        own_val = "not published"
+    elif c.asset_value_from_store:
+        own_val = f"£{c.asset_value_psm:,.2f}/m²"
+    else:
+        own_val = f"£{c.asset_value_psm:,.2f}/m² (your figure)"
+    passing = (f"passing £{asset.passing_rent_psf:,.2f} psf (your figure)"
+               if asset.passing_rent_psf is not None else "no passing rent on file")
+
     lines = [
         "| Building | Size (sq ft) | Built | EPC | VOA valuation* | Reported rent |",
         "|---|---|---|---|---|---|",
-        f"| **{asset.name}** (yours — fictional) | {cell(asset.sqft, '{:,}')} "
+        f"| **{asset.name}** (yours) | {cell(asset.sqft, '{:,}')} "
         f"| {cell(asset.year_built)} | {cell(asset.epc_rating)} "
-        f"| {cell(asset.rateable_value_psm, '£{:,.2f}/m² (fictional)')} "
-        f"| passing {cell(asset.passing_rent_psf, '£{:,.2f} psf')} (fictional) |",
+        f"| {own_val} "
+        f"| {passing} |",
     ]
     for row in c.rows:
         lines.append(

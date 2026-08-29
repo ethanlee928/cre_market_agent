@@ -4,7 +4,7 @@ The reviewer's question -- "is this holding aligned with the market, more
 expensive, or cheaper?" -- answered against named buildings rather than a
 submarket average. `_reversion` already does this arithmetic against a grade
 average; this module swaps the comparator for a deliberately assembled peer
-set. Design: docs/designs/canary-wharf-peer-comps.md.
+set.
 
 Two invariants live here:
 
@@ -91,7 +91,9 @@ class Comparison:
     valuation_n: int = 0
     valuation_period: str = ""              # the valuation basis year, off the facts
     valuation_refusal: str | None = None
-    asset_value_psm: float | None = None    # the asset's own (fictional) valuation
+    asset_value_psm: float | None = None    # the asset's own valuation
+    asset_value_from_store: bool = False    # True: same VOA list as the peers'
+                                            # False: user-supplied via the yaml
     valuation_gap_share: float | None = None    # (asset - street) / street
     valuation_gap_annual: float | None = None   # implied £/yr across asset area
 
@@ -120,9 +122,12 @@ def peer_set(asset: Asset, store: Store) -> list[PeerMatch] | Refusal:
             f"run and no peer set can be justified")
     roster = store.find_buildings(asset.submarket)
     if not roster:
+        have = sorted({b.submarket for b in store.buildings})
+        rosters = " and ".join(have) if have else "no submarket at all"
         return Refusal(
             f"no building roster covers {asset.submarket}: this system holds "
-            f"one for Canary Wharf only, so there is nothing to compare against")
+            f"rosters for {rosters} only, so there is nothing to compare "
+            f"against")
 
     matches: list[PeerMatch] = []
     for b in roster:
@@ -220,7 +225,18 @@ def compare(asset: Asset, store: Store) -> Comparison | Refusal:
     # asset's own £/m² against the peer street's, both on the same fixed
     # valuation date. psm_to_psf converts the £/m² gap to £/ft² so the annual
     # figure is that gap carried across the asset's square footage.
-    cmp.asset_value_psm = asset.rateable_value_psm
+    #
+    # The asset's own figure prefers the store: a real holding sits in the
+    # same VOA list as its peers, so both sides of the gap carry the same
+    # source and date. The yaml field is the fallback for a figure the user
+    # supplied themselves, and stays labelled as theirs wherever it renders.
+    own = store.get(VALUATION_METRIC, asset.submarket, building=asset.name)
+    if own is not None and own.value is not None:
+        cmp.asset_value_psm = own.value
+        cmp.asset_value_from_store = True
+        cmp.evidence.append(own)
+    else:
+        cmp.asset_value_psm = asset.rateable_value_psm
     if cmp.asset_value_psm is not None and cmp.valuation_avg_psm is not None:
         gap_psm = cmp.asset_value_psm - cmp.valuation_avg_psm
         cmp.valuation_gap_share = gap_psm / cmp.valuation_avg_psm

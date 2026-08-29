@@ -91,7 +91,7 @@ cases:
       figures_sourced: true
 
   - id: watchlist_epc
-    question: "What's the EPC rating of 120 Fenchurch Street?"
+    question: "What's the EPC rating of The Bailey?"
     expect:
       must_call: [{tool: get_watchlist|get_signals}]
       figures_sourced: true
@@ -125,23 +125,25 @@ cases:
 
   # -- portfolio decisions: the closed vocabulary, never "monitor" ----------
 
-  - id: mayfair_house_decision
-    question: "What should I do about Mayfair House?"
+  - id: cannon_street_decision
+    question: "What should I do about 108 Cannon Street?"
     expect:
-      must_call: [{tool: get_signals|get_watchlist}]
+      must_call: [{tool: get_signals|get_watchlist|compare_building}]
       action_verb: true
       forbid: ['\bmonitor', 'keep an eye', 'watch(ing)? this space']
       figures_sourced: true
 
-  - id: clerkenwell_works_exposure
-    question: "Is Clerkenwell Works exposed to anything right now?"
+  - id: city_road_exposure
+    question: "Is 99 City Road exposed to anything right now?"
     expect:
       must_call: [{tool: get_signals|get_watchlist}]
       forbid: ['\bmonitor', 'keep an eye']
       figures_sourced: true
 
-  - id: fenchurch_decision
-    question: "Should we re-let or sell 120 Fenchurch Street when the lease ends?"
+  - id: bailey_decision
+    # The rent roll is not on file, so the honest close is the peer verdict
+    # plus the missing-lease-data statement -- never invented lease terms.
+    question: "Should we re-let or sell The Bailey when the lease ends?"
     expect:
       action_verb: true
       forbid: ['\bmonitor', 'keep an eye']
@@ -235,7 +237,7 @@ cases:
   # -- building vs building: the peer-comps lead demo -----------------------
 
   - id: peer_comparison_lead
-    question: "Is Meridian Quay Tower priced right against its peers?"
+    question: "Is The Bailey priced right against its peers?"
     expect:
       must_call: [{tool: compare_building}]
       # The verdict is valuation-vs-valuation in £/m² (C-3). Mixing bases --
@@ -246,15 +248,17 @@ cases:
       figures_sourced: true
 
   - id: peer_value_for_money
-    question: "Is Meridian Quay Tower value for money compared with 25 Cabot Square?"
+    question: "Is The Bailey value for money compared with 20 Old Bailey?"
     expect:
       must_call: [{tool: compare_building}]
       figures_sourced: true
 
   - id: peer_comparison_refuses_off_roster
-    # No roster outside Canary Wharf: the correct answer relays the computed
-    # refusal instead of assembling peers from memory or the open web.
-    question: "Compare our Mayfair building to its neighbouring buildings"
+    # 99 City Road is a real holding with no roster (City Fringe) and no 2026
+    # rating-list assessment while it is stripped for redevelopment: the
+    # correct answer relays the computed refusal instead of assembling peers
+    # from memory or the open web.
+    question: "Compare 99 City Road to its neighbouring buildings"
     expect:
       must_call: [{tool: compare_building|get_watchlist}]
       refusal_or_web: true

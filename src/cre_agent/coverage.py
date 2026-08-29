@@ -67,18 +67,20 @@ AREAS: tuple[KeyArea, ...] = (
                    "is published in this source"),
     KeyArea(8, "News / named events",
             tools=("find_market_activity",),
-            caveat="20 seed events (17 Savills transactions, 3 Canary Wharf "
-                   "building events) plus live Search grounding; no detector, "
-                   "and 13 of the 20 carry no submarket"),
+            caveat="27 seed events (17 Savills transactions, 3 Canary Wharf "
+                   "building events, 7 on the Nan Fung holdings) plus live "
+                   "Search grounding; no detector, and 13 of the 27 carry no "
+                   "submarket"),
     # The ninth area is an extension of the brief's spec, added on industry
     # feedback (2026-08-29): building-vs-building is the decision surface a
-    # practitioner actually asked for. docs/designs/canary-wharf-peer-comps.md.
+    # practitioner actually asked for.
     KeyArea(9, "Peer comparison (building vs building)",
             ("rateable_value_avg",),
             detector="peer_gap", tools=("compare_building",),
-            caveat="Canary Wharf roster only; valuations are VOA rateable values "
-                   "on a fixed 2024 basis, not passing rents; building-level "
-                   "vacancy limited to individually reported majors"),
+            caveat="rosters for the City Core corridors and Canary Wharf only; "
+                   "valuations are VOA rateable values on a fixed 2024 basis, "
+                   "not passing rents; building-level vacancy limited to "
+                   "individually reported majors"),
 )
 
 

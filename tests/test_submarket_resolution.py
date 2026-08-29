@@ -99,11 +99,12 @@ def test_detector_output_is_unchanged_by_resolution():
     from cre_agent.signals import detect_all
     sigs = detect_all(Store.load(), Watchlist.load())
     assert [s.id for s in sigs] == [
-        "peer_gap:Meridian Quay Tower",       # the peer-comps lead card
-        "quality_spread:City",
-        "quality_spread:West End",
+        "peer_gap:The Bailey",                # the peer-comps lead card
+        "peer_gap:108 Cannon Street",
+        "large_occupier_squeeze:Central London",   # claims three holdings,
+        "quality_spread:City",                     # so it sorts above the
+        "quality_spread:West End",                 # unclaimed market signals
         "supply_shock:Central London",
-        "large_occupier_squeeze:Central London",
         "sector_demand:Insurance & Financial",
     ]
 
@@ -127,7 +128,9 @@ def test_west_end_query_reaches_anthropic():
 
 def test_events_roll_up_to_central_london():
     s = store()
-    everything = s.find_events(submarket="Central London")
+    # limit raised past the default 10: with the Endurance seed loaded, 14
+    # events carry a submarket and every one must roll up.
+    everything = s.find_events(submarket="Central London", limit=len(s.events))
     assert len(everything) == len(s.events) - s.events_missing_submarket()
 
 
@@ -175,7 +178,7 @@ def test_filtered_events_state_what_the_filter_cannot_see():
     a = tools()
     r = a._run_tool("find_market_activity", {"submarket": "West End"})
     assert r["count"] >= 1
-    assert "13 of 20" in r["coverage_caveat"]
+    assert "13 of 27" in r["coverage_caveat"]
 
     unfiltered = a._run_tool("find_market_activity", {})
     assert "coverage_caveat" not in unfiltered

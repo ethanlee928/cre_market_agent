@@ -18,10 +18,12 @@ import re
 from cre_agent.signals import ACTIONS
 
 # Strip before extraction: ISO dates (as-of dates, lease dates), then period
-# tokens and bare years. Order matters -- "2026-08-06" must go as one token,
-# not leave "-08" behind to become a figure.
+# tokens, bare years and decades. Order matters -- "2026-08-06" must go as one
+# token, not leave "-08" behind to become a figure. Decades ("1950s" for a
+# building whose sourced year_built is 1958) are the year rule again: a decade
+# paraphrase of a sourced year is not an invented figure.
 _DATES = re.compile(r"\b\d{4}-\d{2}(?:-\d{2})?\b")
-_PERIODS = re.compile(r"\b\d{4}(?:[QH]\d)?\b|\b[QH][1-4]\b")
+_PERIODS = re.compile(r"\b\d{4}(?:[QH]\d|s)?\b|\b[QH][1-4]\b")
 
 _MULT = {"m": 1e6, "million": 1e6, "bn": 1e9, "billion": 1e9, "k": 1e3}
 
@@ -102,12 +104,28 @@ def _matches(stated: float, allowed: set[float]) -> bool:
     return False
 
 
+def _complement_of_sourced_pct(raw: str, value: float,
+                               allowed: set[float]) -> bool:
+    """"65% is not pre-let" restates a sourced "35% pre-let". A percentage
+    complement asserts nothing the source did not -- it cannot be wrong when
+    the source is right -- so it is the rounding rule, not an invention.
+    Percent-shaped tokens only, both sides inside [0, 100]."""
+    if "%" not in raw and "percent" not in raw.lower():
+        return False
+    if not 0 <= value <= 100:
+        return False
+    return any(0 <= a <= 100 and abs((100 - a) - value) < 0.05
+               for a in allowed)
+
+
 def figures_sourced(answer: str, allowed: set[float],
                     has_citations: bool) -> tuple[list[str], list[str]]:
     """(failures, warnings): stated tokens with no source in the trace."""
     failures, warnings = [], []
     for raw, value in stated_figures(answer):
         if _matches(value, allowed):
+            continue
+        if _complement_of_sourced_pct(raw, value, allowed):
             continue
         (warnings if has_citations else failures).append(raw)
     return failures, warnings

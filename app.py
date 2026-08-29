@@ -152,10 +152,10 @@ if not st.session_state.messages and agent.enabled:
     seeds = ["Should we be worried about the City Fringe?",
              "Who's taking space right now?",
              "What's driving demand right now?",
-             "What should I do about Mayfair House?",
+             "What's happening at Regent Quarter?",
              # The leading demo: building vs building against named peers.
-             "Is Meridian Quay Tower priced right against its peers?",
-             "Compare our Mayfair building to its neighbours"]
+             "Is The Bailey priced right against its peers?",
+             "Compare 99 City Road to its neighbours"]
     for i in range(0, len(seeds), 2):
         for col, q in zip(st.columns(2), seeds[i:i + 2]):
             if col.button(q, use_container_width=True):

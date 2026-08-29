@@ -1,0 +1,331 @@
+{
+ "source": {
+  "publisher": "Valuation Office Agency",
+  "title": "2026 non-domestic rating list, compiled summary valuations (baseline epoch 0003), City of London office aggregation for the Cheapside/Gresham/Wood, Old Bailey/Ludgate/Fleet Place and Cannon Street corridors",
+  "published": "2026-04-01",
+  "url": "https://voaratinglists.blob.core.windows.net/html/rlidata.htm"
+ },
+ "_method": "Same method as seed_voa_cw_2026list.json: each figure is the building's aggregate rateable value divided by aggregate floor area across the office hereditaments matched to it (record type 01, description containing 'Office', street name plus trailing street number, with named exceptions recorded per building). Values are GBP per square metre on the list's antecedent valuation date of 1 April 2024. Counts of 1-4 are whole-building or multi-floor assessments embedding quantum discounts; large counts are floor-by-floor multi-lets, sometimes including serviced suites. 99 City Road (an Endurance Land / Nan Fung holding under redevelopment) has no matchable office assessment in the 2026 list and so carries no figure. An un-numbered 4,078 m2 '3rd-5th floors' block on Ludgate Hill could not be attributed to a named building and was excluded.",
+ "facts": [
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "1 Fleet Place",
+   "period": "2024",
+   "value": 386.36,
+   "unit": "gbp_psm",
+   "hereditaments": 8,
+   "note": "Aggregate RV £5,737,425 over 14,850 m2 across 8 office hereditament(s). Two multi-floor blocks (basement-3rd, 5th-7th) dominate the aggregate and embed quantum discounts, which is why it sits well below its neighbours."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "1 Wood Street",
+   "period": "2024",
+   "value": 507.25,
+   "unit": "gbp_psm",
+   "hereditaments": 6,
+   "note": "Aggregate RV £7,559,000 over 14,902 m2 across 6 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "10 Fleet Place",
+   "period": "2024",
+   "value": 496.78,
+   "unit": "gbp_psm",
+   "hereditaments": 13,
+   "note": "Aggregate RV £7,336,400 over 14,768 m2 across 13 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "10 Old Bailey",
+   "period": "2024",
+   "value": 598.21,
+   "unit": "gbp_psm",
+   "hereditaments": 7,
+   "note": "Aggregate RV £2,756,500 over 4,608 m2 across 7 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "100 Cheapside",
+   "period": "2024",
+   "value": 649.06,
+   "unit": "gbp_psm",
+   "hereditaments": 8,
+   "note": "Aggregate RV £4,512,000 over 6,952 m2 across 8 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "100 Wood Street",
+   "period": "2024",
+   "value": 518.14,
+   "unit": "gbp_psm",
+   "hereditaments": 15,
+   "note": "Aggregate RV £6,386,650 over 12,326 m2 across 15 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "107 Cheapside",
+   "period": "2024",
+   "value": 605.34,
+   "unit": "gbp_psm",
+   "hereditaments": 40,
+   "note": "Aggregate RV £8,335,200 over 13,770 m2 across 40 office hereditament(s). Multi-let across 40 hereditaments including serviced suites."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "108 Cannon Street",
+   "period": "2024",
+   "value": 583.7,
+   "unit": "gbp_psm",
+   "hereditaments": 9,
+   "note": "Aggregate RV £2,078,500 over 3,561 m2 across 9 office hereditament(s). Endurance Land / Nan Fung holding. Assessed floor-by-floor under '108' (EC4N 6EU) and '108-108A' (EC4N 6RN); nine office floors, lower ground to seventh."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "110 Cannon Street",
+   "period": "2024",
+   "value": 471.18,
+   "unit": "gbp_psm",
+   "hereditaments": 13,
+   "note": "Aggregate RV £2,701,000 over 5,732 m2 across 13 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "138 Cheapside",
+   "period": "2024",
+   "value": 573.81,
+   "unit": "gbp_psm",
+   "hereditaments": 12,
+   "note": "Aggregate RV £3,727,000 over 6,495 m2 across 12 office hereditament(s). Endurance Land / Nan Fung holding (Cheapside House). The VOA names its floors three ways -- 'Cheapside House 134-137', 'at 138', and bare floor prefixes at EC2V 6BT -- all one building; the ~80,000 sq ft marketing figure includes ground-floor retail assessed separately as shops."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "150 Cheapside",
+   "period": "2024",
+   "value": 605.42,
+   "unit": "gbp_psm",
+   "hereditaments": 8,
+   "note": "Aggregate RV £9,119,500 over 15,063 m2 across 8 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "2 Gresham Street",
+   "period": "2024",
+   "value": 646.83,
+   "unit": "gbp_psm",
+   "hereditaments": 10,
+   "note": "Aggregate RV £11,323,000 over 17,505 m2 across 10 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "20 Gresham Street",
+   "period": "2024",
+   "value": 561.24,
+   "unit": "gbp_psm",
+   "hereditaments": 14,
+   "note": "Aggregate RV £7,335,500 over 13,070 m2 across 14 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "20 Old Bailey",
+   "period": "2024",
+   "value": 632.26,
+   "unit": "gbp_psm",
+   "hereditaments": 43,
+   "note": "Aggregate RV £13,823,000 over 21,863 m2 across 43 office hereditament(s). Multi-let across 43 hereditaments including serviced suites."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "25 Cannon Street",
+   "period": "2024",
+   "value": 631.14,
+   "unit": "gbp_psm",
+   "hereditaments": 5,
+   "note": "Aggregate RV £6,259,000 over 9,917 m2 across 5 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "25 Gresham Street",
+   "period": "2024",
+   "value": 417.9,
+   "unit": "gbp_psm",
+   "hereditaments": 1,
+   "note": "Aggregate RV £4,490,000 over 10,744 m2 across 1 office hereditament(s). Single whole-building assessment (Lloyds Banking Group HQ); quantum discount embedded, same pattern as the Canary Wharf whole-building records."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "30 Gresham Street",
+   "period": "2024",
+   "value": 501.64,
+   "unit": "gbp_psm",
+   "hereditaments": 13,
+   "note": "Aggregate RV £16,958,500 over 33,806 m2 across 13 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "45 Cannon Street",
+   "period": "2024",
+   "value": 658.68,
+   "unit": "gbp_psm",
+   "hereditaments": 7,
+   "note": "Aggregate RV £5,867,350 over 8,908 m2 across 7 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "45 Gresham Street",
+   "period": "2024",
+   "value": 642.13,
+   "unit": "gbp_psm",
+   "hereditaments": 4,
+   "note": "Aggregate RV £9,780,000 over 15,231 m2 across 4 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "5 Fleet Place",
+   "period": "2024",
+   "value": 531.08,
+   "unit": "gbp_psm",
+   "hereditaments": 5,
+   "note": "Aggregate RV £6,032,500 over 11,359 m2 across 5 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "60 Ludgate Hill",
+   "period": "2024",
+   "value": 647.04,
+   "unit": "gbp_psm",
+   "hereditaments": 13,
+   "note": "Aggregate RV £9,210,250 over 14,234 m2 across 13 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "80 Cheapside",
+   "period": "2024",
+   "value": 500.17,
+   "unit": "gbp_psm",
+   "hereditaments": 11,
+   "note": "Aggregate RV £3,477,500 over 6,953 m2 across 11 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "88 Wood Street",
+   "period": "2024",
+   "value": 528.57,
+   "unit": "gbp_psm",
+   "hereditaments": 19,
+   "note": "Aggregate RV £6,592,000 over 12,471 m2 across 19 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "95 Gresham Street",
+   "period": "2024",
+   "value": 547.23,
+   "unit": "gbp_psm",
+   "hereditaments": 9,
+   "note": "Aggregate RV £4,290,100 over 7,840 m2 across 9 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "Cannon Place, 78 Cannon Street",
+   "period": "2024",
+   "value": 592.33,
+   "unit": "gbp_psm",
+   "hereditaments": 46,
+   "note": "Aggregate RV £20,914,500 over 35,309 m2 across 46 office hereditament(s). Multi-let across 46 hereditaments above Cannon Street station."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "Fleet Place House, 2 Fleet Place",
+   "period": "2024",
+   "value": 455.38,
+   "unit": "gbp_psm",
+   "hereditaments": 3,
+   "note": "Aggregate RV £3,635,000 over 7,982 m2 across 3 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "Mizuho House, 30 Old Bailey",
+   "period": "2024",
+   "value": 595.95,
+   "unit": "gbp_psm",
+   "hereditaments": 4,
+   "note": "Aggregate RV £11,162,500 over 18,731 m2 across 4 office hereditament(s). Four large hereditaments, Mizuho's near-whole-building occupation."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "Procession House, 55 Ludgate Hill",
+   "period": "2024",
+   "value": 648.89,
+   "unit": "gbp_psm",
+   "hereditaments": 3,
+   "note": "Aggregate RV £2,375,000 over 3,660 m2 across 3 office hereditament(s)."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "Sancroft, 10-15 Newgate Street",
+   "period": "2024",
+   "value": 606.15,
+   "unit": "gbp_psm",
+   "hereditaments": 3,
+   "note": "Aggregate RV £14,600,000 over 24,086 m2 across 3 office hereditament(s). Three large multi-floor assessments of the 2022 redevelopment."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "The Bailey",
+   "period": "2024",
+   "value": 616.77,
+   "unit": "gbp_psm",
+   "hereditaments": 4,
+   "note": "Aggregate RV £6,552,500 over 10,624 m2 across 4 office hereditament(s). Endurance Land / Nan Fung holding at 16 Old Bailey. Four hereditaments whose split mirrors the 2020 letting: '2nd-8th floors' (7,700 m2, the IPG Mediabrands block), first, ground and part-basement."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "Watling House, 33 Cannon Street",
+   "period": "2024",
+   "value": 559.48,
+   "unit": "gbp_psm",
+   "hereditaments": 51,
+   "note": "Aggregate RV £4,166,500 over 7,447 m2 across 51 office hereditament(s). 51 hereditaments, dominated by serviced-office suites; area-weighting keeps them from skewing the figure."
+  },
+  {
+   "metric": "rateable_value_avg",
+   "submarket": "City Core",
+   "building": "Yarnwicke, 119-121 Cannon Street",
+   "period": "2024",
+   "value": 574.0,
+   "unit": "gbp_psm",
+   "hereditaments": 6,
+   "note": "Aggregate RV £2,440,000 over 4,251 m2 across 6 office hereditament(s)."
+  }
+ ]
+}

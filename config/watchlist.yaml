@@ -1,64 +1,86 @@
-# ILLUSTRATIVE PORTFOLIO — these three assets are fictional.
+# REAL PORTFOLIO — the five London holdings of Nan Fung Group, held and
+# managed through Endurance Land (its wholly-owned development platform since
+# August 2024; the portfolio page's "investment partner" framing predates
+# that). Extracted from enduranceland.com/portfolio (crawled 2026-08-29,
+# filtered to investment partner = Nan Fung Group) and verified against
+# nanfung.com's international property pages and 2024-2026 trade press.
 #
-# They exist so the relevance lens has something to match against in a demo.
-# Every market figure in this application is real and sourced from Savills;
-# the holdings below are not. That includes the passing rents, break dates and
-# EPC ratings — those are the inputs to the reversion arithmetic on the brief,
-# so the figures it computes are real arithmetic over invented rents. The app
-# labels the portfolio as illustrative on screen.
+# Every field below carries a public source, named in the note. What the
+# public record does not carry is deliberately ABSENT, not invented: passing
+# rents, lease expiries and break dates are the client's rent roll (Tier 3),
+# so the reversion arithmetic and lease-window matching degrade exactly as
+# they do for an empty watchlist. Publicly reported lettings live in
+# data/seed_endurance_events_2026.json as cited events instead.
 #
-# In production this is Tier 3 data: the client's own rent roll, which is
-# exactly the input no market data vendor can obtain.
+# The three City Core assets sit in the same VOA 2026 rating list as their
+# peer roster (data/seed_voa_city_2026list.json), so the peer card's own-side
+# figure comes from the store, not from this file. rateable_value_psm stays
+# supported as a user-supplied fallback and renders labelled "(your figure)".
 #
 # Replace with your own assets, or delete every entry: the market-wide view
 # works completely with an empty watchlist.
 
-label: "Illustrative portfolio (fictional holdings, real market data)"
+label: "Nan Fung Group London portfolio (via Endurance Land) — real holdings, public-source data"
 
 assets:
-  - name: "120 Fenchurch Street"
+  - name: "138 Cheapside"
+    submarket: "City Core"
+    sqft: 80300
+    year_built: 1958
+    note: "Cheapside House, EC2V; 80,300 sq ft office building with retail
+      units, acquired October 2016 for £83.5m from CPPIB/Hermes (nanfung.com;
+      RBW Estates). Purpose-built 1956-58 (Theo Birks for Bernard Sunley &
+      Sons); repositioned 2019 (Cat A across four floors, Morrow + Lorraine /
+      Faithdean); floors re-refurbished 2025-26; Hollis took ~10,000 sq ft in
+      March 2025. The 1958 vintage means the peer age band finds almost no
+      same-era City stock — the comparison refuses rather than stretches."
+
+  - name: "108 Cannon Street"
+    submarket: "City Core"
+    sqft: 38800
+    epc_rating: "B"
+    note: "EC4N; 38,800 sq ft, acquired 2016 (nanfung.com — the VOA office
+      aggregate agrees at 38,330 sq ft). 1980s building (exact year
+      unpublished, so the peer age rule skips and says so) comprehensively
+      refurbished and extended by Endurance Land, completed 2023 (Barr
+      Gazetas; rebuilt 6th floor, new 7th, rear extension; BREEAM Very Good,
+      EPC B — whole-building certificate 6516-5434-8800-9221-7767). Fully let
+      since April 2024 (Endurance Land, 2024-04-30)."
+
+  - name: "The Bailey"
     submarket: "City Core"
     grade: "A"
-    sqft: 145000
-    lease_expiry: "2031-06"
-    passing_rent_psf: 68.00
-    epc_rating: "B"
-    note: "Core City tower, recently refurbished. No break: the expiry is the
-      only date on the clock, and it falls outside the delivery window."
+    sqft: 115000
+    year_built: 1999
+    epc_rating: "A"
+    note: "16 Old Bailey, EC4M; c.115,000 sq ft over 10 floors, acquired 2015
+      for c.£80m (CoStar 2015-03). Grade II listed 1912 front block; the
+      extension holding ~90% of NIA was built 1999 — year_built records that
+      dominant vintage. Orms deep retrofit retained 92% of the structure and
+      added two floors (92,000 → 115,000 sq ft), practical completion April
+      2021; EPC A whole-building certificate 4695-1453-7318-1831-9988 (to
+      2031), BREEAM Excellent, WiredScore Platinum. Let to IPG Mediabrands
+      (93,000 sq ft) and Willmott Dixon Interiors (1st floor). Caveat,
+      unresolved: Green Street News (2025-09-12) reported Nan Fung marketing
+      a £140m 'Holborn trophy' — building unidentified; this asset is the
+      nearest geographic candidate but the attribution is unverified."
 
-  - name: "Mayfair House"
-    submarket: "Mayfair"
-    grade: "B"
-    sqft: 24000
-    lease_expiry: "2029-09"
-    break_date: "2027-09"
-    passing_rent_psf: 82.00
-    epc_rating: "D"
-    note: "Secondary West End stock, refurbishment decision due"
-
-  - name: "Clerkenwell Works"
+  - name: "99 City Road"
     submarket: "City Fringe"
-    grade: "B"
-    sqft: 38000
-    lease_expiry: "2028-03"
-    passing_rent_psf: 52.00
-    epc_rating: "C"
-    note: "Fringe location, exposed to elevated fringe vacancy"
+    sqft: 475000
+    note: "EC1 (Old Street); the former Inmarsat tower, being retrofitted and
+      extended to a 36-storey, 475,000 sq ft office (KPF; Multiplex main works
+      from Q3 2026; ~£300m; practical completion targeted 2030; Knight Frank
+      leasing — Construction Enquirer 2026-08-10). sqft is the completed
+      scheme. No 2026 rating-list assessment exists while the building is
+      stripped for redevelopment, so the peer card refuses for it, correctly."
 
-  # The peer-comparison demo asset. The name is invented and collides with no
-  # building on the estate roster; the sqft, year, rents and the rateable
-  # value below are fictional too. They are the inputs to the building-vs-
-  # building card, whose PEERS are real buildings with real VOA figures --
-  # which is exactly why the fictional label matters most here.
-  - name: "Meridian Quay Tower"
-    submarket: "Canary Wharf"
-    grade: "A"
-    sqft: 260000
-    year_built: 2001
-    lease_expiry: "2029-03"
-    break_date: "2027-12"
-    passing_rent_psf: 49.50
-    rateable_value_psm: 295.00
-    epc_rating: "C"
-    note: "Mid-size estate tower, single tenant, break ahead of a heavy
-      delivery window. Valued above its street on the 2024 basis."
+  - name: "Regent Quarter"
+    submarket: "King's Cross"
+    sqft: 260730
+    note: "N1, east of King's Cross station; ~260,730 sq ft mixed-use estate
+      across 12 office buildings and 20 retail/leisure units, purchased 2018
+      from ADIA for a reported £271m (Mingtiandi). Being redeveloped into a
+      life-science-led campus; OpenAI signed 88,500 sq ft across Jahn Court &
+      Brassworks in April 2026 — its first permanent London office. An estate
+      is not a building: no like-for-like peer comparison exists for it."

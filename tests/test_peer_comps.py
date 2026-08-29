@@ -199,7 +199,8 @@ def test_market_lookup_never_returns_a_building_fact():
 
 def test_two_buildings_same_metric_both_survive_dedupe():
     s = Store.load()
-    assert len(s.find(metric="rateable_value_avg", building="__any__")) == 15
+    # 15 Canary Wharf + 32 City Core buildings, holdings included.
+    assert len(s.find(metric="rateable_value_avg", building="__any__")) == 47
 
 
 def test_roster_resolves_downward_like_events():
@@ -223,25 +224,59 @@ def test_cw_letting_events_with_rents_use_roster_names():
 
 # -- the signal on the brief -------------------------------------------------
 
-def test_real_pipeline_meridian_is_risk_and_leads():
+def test_real_pipeline_city_holdings_get_cards():
+    """The shipped brief: peer cards for the two City holdings the roster can
+    justify a peer set for, both sides of each card off the same VOA list."""
     s, w = Store.load(), Watchlist.load()
-    sigs = [g for g in detect_all(s, w) if g.id.startswith("peer_gap")]
-    assert len(sigs) == 1 and sigs[0].id == "peer_gap:Meridian Quay Tower"
-    sig = sigs[0]
-    assert sig.severity == "RISK"
-    assert sig.match_actions["Meridian Quay Tower"] in ACTIONS
-    assert "fictional" in sig.detail          # the label rides with the number
-    assert "per m²" in sig.headline and "psf" not in sig.headline
-    assert "monitor" not in sig.detail and "monitor" not in \
-        sig.match_reasons["Meridian Quay Tower"]
-    assert sig.citations()                    # VOA facts travel as evidence
+    sigs = {g.id: g for g in detect_all(s, w) if g.id.startswith("peer_gap")}
+    assert set(sigs) == {"peer_gap:The Bailey", "peer_gap:108 Cannon Street"}
+    for sig in sigs.values():
+        name = sig.id.split(":", 1)[1]
+        assert sig.match_actions[name] in ACTIONS
+        assert "per m²" in sig.headline and "psf" not in sig.headline
+        assert "monitor" not in sig.detail
+        assert "fictional" not in sig.detail     # nothing here is invented
+        assert "(yours)" in sig.detail           # ...but the row is still marked
+        assert sig.citations()                   # VOA facts travel as evidence
+
+
+def test_own_valuation_comes_from_the_store_not_the_yaml():
+    """The asset's side of the gap is the same VOA list as the peers' side.
+    The Bailey's watchlist entry carries no rateable_value_psm, yet the
+    comparison carries its aggregate £616.77/m² -- fetched, with evidence."""
+    s, w = Store.load(), Watchlist.load()
+    bailey = next(a for a in w.assets if a.name == "The Bailey")
+    assert bailey.rateable_value_psm is None
+    c = comps.compare(bailey, s)
+    assert not isinstance(c, comps.Refusal)
+    assert c.asset_value_from_store is True
+    assert c.asset_value_psm == 616.77
+    own = [f for f in c.evidence if f.building == "The Bailey"]
+    assert own and own[0].source.publisher == "Valuation Office Agency"
+
+
+def test_a_holding_is_never_its_own_peer():
+    """The holdings sit on the roster now, so self-exclusion carries load."""
+    s, w = Store.load(), Watchlist.load()
+    for a in w.assets:
+        c = comps.compare(a, s)
+        if isinstance(c, comps.Refusal):
+            continue
+        assert a.name not in [pm.building.name for pm in c.peers]
 
 
 def test_refusal_emits_no_signal():
-    """Mayfair House has no roster, so peer_gap stays silent about it --
-    a comparison that cannot name its peers does not fire."""
+    """Three holdings stay silent, each for a computed reason: 138 Cheapside
+    is 1958 stock the age band finds no street for, 99 City Road has no City
+    Fringe roster, Regent Quarter has no King's Cross roster. A comparison
+    that cannot name its peers does not fire."""
     s, w = Store.load(), Watchlist.load()
-    assert not [g for g in peer_gap(s, w) if "Mayfair" in g.id]
+    fired = {g.id for g in peer_gap(s, w)}
+    for name in ("138 Cheapside", "99 City Road", "Regent Quarter"):
+        assert f"peer_gap:{name}" not in fired
+    cheapside = next(a for a in w.assets if a.name == "138 Cheapside")
+    r = comps.compare(cheapside, s)
+    assert isinstance(r, comps.Refusal) and "qualifying peer" in r.reason
 
 
 def test_empty_watchlist_stays_fully_functional():
@@ -257,19 +292,25 @@ def test_compare_building_tool_matches_the_brief():
     from cre_agent.llm.gemini import Agent
     s, w = Store.load(), Watchlist.load()
     agent = Agent(s, w, api_key=None)         # tools work without a key
-    out = agent._run_tool("compare_building", {"asset": "Meridian Quay Tower"})
-    assert out["found"] and out["asset_is_fictional"]
+    out = agent._run_tool("compare_building", {"asset": "The Bailey"})
+    assert out["found"]
+    assert "VOA" in out["asset_value_source"]     # not user-supplied, not absent
     assert out["recommended_action"] in ACTIONS
-    sig = [g for g in detect_all(s, w) if g.id.startswith("peer_gap")][0]
-    assert out["verdict"] == sig.match_reasons["Meridian Quay Tower"]
-    assert out["recommended_action"] == sig.match_actions["Meridian Quay Tower"]
+    sig = [g for g in detect_all(s, w) if g.id == "peer_gap:The Bailey"][0]
+    assert out["verdict"] == sig.match_reasons["The Bailey"]
+    assert out["recommended_action"] == sig.match_actions["The Bailey"]
 
 
 def test_compare_building_tool_relays_refusals():
     from cre_agent.llm.gemini import Agent
     agent = Agent(Store.load(), Watchlist.load(), api_key=None)
-    out = agent._run_tool("compare_building", {"asset": "Mayfair House"})
-    assert out["found"] is False and "Canary Wharf" in out["refusal"]
+    # A real holding with no roster: the refusal names what rosters DO exist.
+    out = agent._run_tool("compare_building", {"asset": "99 City Road"})
+    assert out["found"] is False
+    assert "City Fringe" in out["refusal"]
+    assert "Canary Wharf and City Core" in out["refusal"]
+    out = agent._run_tool("compare_building", {"asset": "Regent Quarter"})
+    assert out["found"] is False and "King's Cross" in out["refusal"]
     out = agent._run_tool("compare_building", {"asset": "No Such House"})
     assert out["found"] is False and "watchlist" in out["message"]
 

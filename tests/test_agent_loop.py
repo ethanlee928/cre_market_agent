@@ -212,6 +212,24 @@ def test_grader_years_periods_and_dates_are_not_figures():
     assert [v for _, v in stated] == [9.1], stated
 
 
+def test_grader_decades_are_years_not_figures():
+    """'1950s stock' for a building whose sourced year_built is 1958 failed a
+    live rep. A decade paraphrase of a sourced year is the year rule again."""
+    assert graders.stated_figures("unmodernised 1950s stock, built 1958") == []
+
+
+def test_grader_percentage_complement_is_sourced_but_bare_number_is_not():
+    """'65% not pre-let' restates a sourced '35% pre-let' -- no new fact.
+    The allowance is percent-shaped only: a bare 65 still needs a source."""
+    allowed = graders.allowed_figures([], [{"value": "35%"}])
+    fails, _ = graders.figures_sourced(
+        "65% of the pipeline is not yet pre-let.", allowed, has_citations=False)
+    assert fails == [], fails
+    fails, _ = graders.figures_sourced(
+        "about 65 buildings are exposed", allowed, has_citations=False)
+    assert fails == ["65"], fails
+
+
 def test_grader_small_counts_are_not_figures_but_41_is():
     assert graders.stated_figures("3 of 5 signals fired.") == []
     stated = graders.stated_figures("41 requirements chasing 21 options.")

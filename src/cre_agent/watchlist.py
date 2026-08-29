@@ -57,8 +57,11 @@ class Asset:
     lease_expiry: str | None = None
     break_date: str | None = None
     passing_rent_psf: float | None = None
-    # The asset's own valuation in £/m², the like-for-like input to the peer
-    # street comparison (comps C-3). Fictional wherever the asset is.
+    # The asset's own valuation in £/m², a user-supplied FALLBACK for the peer
+    # comparison (comps C-3). comps.compare prefers the store: a real holding
+    # sits in the same VOA list as its peers, so leave this unset and let both
+    # sides of the gap carry the same source. A value here renders labelled as
+    # the user's own figure.
     rateable_value_psm: float | None = None
     epc_rating: str | None = None
     note: str | None = None

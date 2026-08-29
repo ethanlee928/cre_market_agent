@@ -76,16 +76,18 @@ bought, and what it cost.
   layer and the agent runs in the same process — one entry point,
   `uv run streamlit run app.py`. A transport boundary would have added deployment
   surface and proved nothing about the loop.
-- **No database server.** The quarter loads from `data/seed_2026Q2.json` at
-  startup: 70 source records, which normalise to 53 Facts and 17 events. Read-only,
-  one quarter, in memory.
+- **No database server.** Everything loads from `data/seed_*.json` at startup —
+  one file per source, 102 Facts and 27 events across nine sources. Read-only,
+  in memory.
 - **No observability stack** — no Langfuse, no tracing backend. Every tool call is
   expanded in the UI directly above the answer it produced, which at this scale
   serves the same purpose: you can see which figures were looked up, and which the
   agent declined to invent.
-- **One data provider.** Savills, Central London Office Market Watch Q2 2026,
-  published 2026-08-06. A second provider is a mapping problem rather than a
-  loading problem — definitions and submarket boundaries differ — which is what
+- **One primary market provider, plus open data.** Savills, Central London
+  Office Market Watch Q2 2026, is the market spine; the VOA rating list, the
+  EPC register, and Colliers/Carter Jonas/trade-press figures join it one seed
+  file per source. Merging providers is a mapping problem rather than a loading
+  problem — definitions and submarket boundaries differ — which is what
   `src/cre_agent/submarkets.py` is for: a controlled vocabulary with an explicit
   hierarchy, so an alias resolves upward to the node that actually holds facts.
   The same reasoning is why the sector vocabulary was dropped rather than guessed.
@@ -114,42 +116,60 @@ bought, and what it cost.
 
 ## What you should see
 
-On load, a briefing with six ranked signals:
+On load, a briefing with seven ranked signals:
 
 |                | Signal                                                                                             | Your exposure                                        |
 | -------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| 🔴 RISK        | Meridian Quay Tower valued 10% above its 6-peer street (£295 against £269 per m²)                  | Meridian Quay Tower                                  |
-| 🔴 RISK        | City Grade B rents falling while Grade A rises (−2.6% against +7.0%)                               | Clerkenwell Works                                    |
-| 🔴 RISK        | West End Grade B rents falling while Grade A rises (−11.3% against +4.0%)                          | Mayfair House                                        |
-| 🟠 WATCH       | Record 7,700,000 sq ft of completions in 2026, only 35% pre-let                                    | Mayfair House, Clerkenwell Works, Meridian Quay Tower |
-| 🟢 OPPORTUNITY | 41 large requirements chasing 21 available options (2.0:1)                                         | 120 Fenchurch Street, Meridian Quay Tower            |
+| 🔴 RISK        | The Bailey valued 18% above its 14-peer street (£617 against £525 per m²)                          | The Bailey                                           |
+| 🟠 WATCH       | 108 Cannon Street valued in line with its 3-peer street (£584 against £574 per m²)                 | 108 Cannon Street                                    |
+| 🟢 OPPORTUNITY | 41 large requirements chasing 21 options (2.0:1)                                                   | The Bailey, 99 City Road, Regent Quarter             |
+| 🔴 RISK        | City Grade B rents falling while Grade A rises (−2.6% against +7.0%)                               | —                                                    |
+| 🔴 RISK        | West End Grade B rents falling while Grade A rises (−11.3% against +4.0%)                          | —                                                    |
+| 🟠 WATCH       | Record 7,700,000 sq ft of completions in 2026, only 35% pre-let                                    | —                                                    |
 | 🟢 OPPORTUNITY | Insurance & Financial take-up at a series low, yet 41% of space under offer against 20% of take-up | —                                                    |
 
-The sidebar shows an illustrative four-asset portfolio, each tagged with the worst
-signal touching it. Signals that hit your holdings sort to the top and expand by default.
+The sidebar shows the portfolio — the five real London holdings of Nan Fung
+Group, extracted from its development platform Endurance Land's public
+portfolio page — each tagged with the worst signal touching it. Signals that
+hit your holdings sort to the top and expand by default.
 
 ### Building vs building — the peer card
 
-The lead signal is a peer comparison: the (fictional) Canary Wharf holding
-against seven real, named buildings of similar size and age on the estate —
-15 Westferry Circus, 5 Churchill Place, 25 Cabot Square, 20 Bank Street,
-20 Churchill Place, 5 Canada Square, 15 Canada Square — each with its floor
-area, completion year, whole-building EPC, and a valuation computed from the
-VOA 2026 rating list (aggregate rateable value over aggregate office floor
-area, £/m², on the 2024 antecedent valuation date). The verdict is computed in
-Python, like for like: the asset's valuation against the peer street's median,
+The lead signal is a peer comparison in which **every figure on both sides is
+real**: The Bailey, the holding at 16 Old Bailey, against fourteen named City
+buildings of similar size and vintage — 20 Old Bailey's neighbours across the
+Cheapside, Gresham/Wood Street, Ludgate/Fleet Place and Cannon Street
+corridors — each with its floor area, completion year, whole-building EPC
+where the register holds one, and a valuation computed from the VOA 2026
+rating list (aggregate rateable value over aggregate office floor area, £/m²,
+on the 2024 antecedent valuation date). The asset's own £/m² comes from the
+same VOA list as its peers', so the 18% gap is one public dataset disagreeing
+with itself about one street — nothing on the card is invented or estimated.
+The verdict is computed in Python, like for like: valuation against valuation,
 never a passing rent against a valuation — the two sit on different bases by
-construction. Cells no source publishes render "not published" (15 Canada
-Square's does, deliberately left in the peer set), and a district with no
-roster — ask about Mayfair — refuses with the reason instead of assembling
-peers from memory.
+construction.
 
-### The join, and the rung it is missing
+The refusals are as deliberate as the cards. 138 Cheapside is 1958 stock the
+±10-year age band finds no street for, so its comparison refuses rather than
+stretches; 99 City Road is stripped for redevelopment and holds no 2026
+rating-list assessment; Regent Quarter is an estate of twelve buildings, not a
+building. Ask about any of them and the answer is the computed refusal with
+its reason — never peers assembled from memory.
+
+### The join, and the rung it deliberately leaves empty
 
 Each matched building gets its own sentence, computed in Python and closing on a
 decision verb — `regear`, `refurbish`, `re-price`, `hold`, `defer capex`,
 `start the conversation`. Never "monitor": that is the word that lets a paragraph end
 without deciding anything.
+
+The rung that stays empty on the shipped brief is the rent roll. The five
+holdings are real, and their passing rents, breaks and expiries are exactly
+the data no public source carries — so the yaml omits them rather than
+inventing them, and the reversion column and lease-window matching degrade
+the way an empty watchlist always has. Type your own rents into
+`config/watchlist.yaml` and this is what lights up, per building (the
+arithmetic is pinned by tests against synthetic fixtures):
 
 > **Clerkenwell Works** — passing £52.00 psf against the City Grade B average of £45.66 psf
 > (2026H1), which is £240,920 a year above market across 38,000 sq ft, exposed at the next
@@ -165,25 +185,19 @@ without deciding anything.
 > → **defer capex**
 
 Two buildings, the same ladder, one missing rung — and the app says which rung and what
-it costs rather than substituting a number. The seed holds two West End lettings with
-achieved rents, £182.50 and £201.00 psf, both of which a naive submarket filter would
-hang off a Grade B secondary building. Without a published Grade B level there is no way
-to say whether either is a ceiling or a like-for-like, so neither is shown.
-
-The two figures per building are deliberately two and not three: passing-minus-Grade-B
-and Grade-A-minus-passing sum exactly to the grade gap, so printing all three invites a
-reader to add two of them and count the same spread twice.
-
-The holdings, their passing rents and their EPC ratings are **fictional** — that is Tier 3
-data, a client's own rent roll. The market figures they are measured against are not.
+it costs rather than substituting a number. The two figures per building are
+deliberately two and not three: passing-minus-Grade-B and Grade-A-minus-passing sum
+exactly to the grade gap, so printing all three invites a reader to add two of them and
+count the same spread twice.
 
 Then ask it something:
 
 > **Should we be worried about the City Fringe?**
 >
-> Yes, particularly for secondary assets. City Fringe vacancy stands at 8.0%, which is
-> 150 bps above its long-run average _(Savills, Q2 2026, as of 2026-08-06)_. This directly
-> impacts your asset, Clerkenwell Works (38,000 sq ft, Grade B, lease expiry March 2028)...
+> Yes, particularly for development exposure. City Fringe vacancy stands at 8.0%, which is
+> 150 bps above its long-run average _(Savills, Q2 2026, as of 2026-08-06)_. Your asset
+> 99 City Road sits in this submarket — a 475,000 sq ft retrofit with main works starting
+> Q3 2026 and completion targeted 2030...
 
 Or ask who is actually active:
 
@@ -221,7 +235,7 @@ _Catch overnight moves and named deals before a client or IC meeting._
 | Test query                                                                      | Today                                                                                                                                                                                                                                                                                                   |
 | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | "Which occupiers signed over 30,000 sq ft?"                                     | ✅ Nine lettings, largest first, each cited                                                                                                                                                                                                                                                             |
-| "…in the City Core or West End specifically"                                    | ◐ Anthropic's 158,138 sq ft now surfaces: `find_market_activity` takes a `submarket`, and matching walks the hierarchy, so a West End question reaches a deal filed under North of Oxford Street East. 13 of 17 events carry no submarket in the source, so the answer states that the count is a floor |
+| "…in the City Core or West End specifically"                                    | ◐ Anthropic's 158,138 sq ft now surfaces: `find_market_activity` takes a `submarket`, and matching walks the hierarchy, so a West End question reaches a deal filed under North of Oxford Street East. 13 of 27 events carry no submarket, so the answer states that the count is a floor |
 | "Flag Bank Rate, gilt yields, rate shifts"                                      | ⛔ No macro data, no `macro_context` tool. Should refuse; today it may answer freehand from Search grounding without labelling the figure as live                                                                                                                                                       |
 | "…this week"                                                                    | ⛔ Source is quarterly, published 2026-08-06. Not answerable from the store at any granularity                                                                                                                                                                                                          |
 | "New planning applications over 100,000 sq ft, with developers and ESG targets" | ⛔ No planning-stage data. `development_starts` is construction stage, downstream of planning                                                                                                                                                                                                           |
@@ -233,7 +247,7 @@ _Compare submarket benchmarks without reading a 50-page PDF._
 | Test query                                                         | Today                                                                                                                                                                                                                                                                                |
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | "City Core versus West End Core vacancy"                           | ✅ 5.9% and 4.4%, both against their 10-year averages                                                                                                                                                                                                                                |
-| "Compare Canary Wharf, City Core and Mayfair/St James's"           | ◐ `Mayfair` now resolves — 4.4%, and the answer names the node it came from. Canary Wharf still holds **zero facts**, but it resolves as a real submarket, so the reply is the Central London figure explicitly labelled as broader geography rather than a bare "I don't have that" |
+| "Compare Canary Wharf, City Core and Mayfair/St James's"           | ✅ `Mayfair` resolves — 4.4%, and the answer names the node it came from. Canary Wharf answers at its own node since the estate harvest: vacancy 8.3% (Colliers, 2025Q4) and prime rent £57.50 (Carter Jonas, 2026Q1), each carrying its true, older as-of date |
 | "Pre-let pipeline ratios by submarket"                             | ◐ `prelet_pct` exists only at Central London level — 35% forecast, 25% under construction, 18% to 2029. No submarket breakdown published                                                                                                                                             |
 | "Southbank comps, rent-free months, headline versus net effective" | ⛔ Southbank holds zero facts. Rent-free incentives and net effective rent are not metrics in this source, and net effective is not derivable without them                                                                                                                           |
 
@@ -269,7 +283,7 @@ provenance. Same defect class as the sector rows that were unreachable before.
 
 ---
 
-## Coverage of the brief's eight key areas
+## Coverage of the brief's nine key areas
 
 ```bash
 uv run python scripts/coverage.py
@@ -284,19 +298,24 @@ uv run python scripts/coverage.py
 | 3  | Take-up / activity               | 4 of 4 metrics     | sector_demand              | covered     |
 | 4  | Supply pipeline                  | 5 of 5 metrics     | supply_shock               | covered     |
 | 5  | Submarket dynamics               | 2 of 2 metrics     | chat only                  | on request  |
-|     no Canary Wharf, Midtown or Southbank facts in this source; a query for one answers at the        |
-|     nearest published parent and says so                                                              |
+|     no Midtown or Southbank facts in any loaded source; a query for one answers at the nearest        |
+|     published parent and says so. Canary Wharf publishes via the Colliers (vacancy, 2025Q4) and       |
+|     Carter Jonas (prime rent, 2026Q1) seeds                                                           |
 | 6  | Macro (rates, gilts, Bank Rate)  | none in source     | not surfaced               | gap         |
 |     not in a quarterly agency report; no tool, and the model is instructed to refuse rather than      |
 |     answer from memory                                                                                |
 | 7  | Occupier drivers                 | 4 of 4 metrics     | quality_spread             | partial     |
 |     flight-to-quality and ESG are covered; no hybrid-working data is published in this source         |
-| 8  | News / named events              | 17 events          | chat only                  | on request  |
-|     17 seed transactions plus live Search grounding; no detector, and 13 of the 17 carry no           |
-|     submarket                                                                                         |
+| 8  | News / named events              | 27 events          | chat only                  | on request  |
+|     27 seed events (17 Savills transactions, 3 Canary Wharf building events, 7 on the Nan Fung        |
+|     holdings) plus live Search grounding; no detector, and 13 of the 27 carry no submarket            |
+| 9  | Peer comparison (building vs bui | 1 of 1 metrics     | peer_gap                   | partial     |
+|     rosters for the City Core corridors and Canary Wharf only; valuations are VOA rateable values     |
+|     on a fixed 2024 basis, not passing rents; building-level vacancy limited to individually          |
+|     reported majors                                                                                   |
 +----+----------------------------------+--------------------+----------------------------+-------------+
-  4 covered · 1 partial · 2 on request · 1 gap
-  Computed from 53 facts, 17 events and 4 detectors at render time.
+  4 covered · 2 partial · 2 on request · 1 gap
+  Computed from 102 facts, 27 events and 5 detectors at render time.
 ```
 
 Nothing in that table is typed in. Only the area names, their metric lists and the
@@ -338,7 +357,7 @@ in a single request. All four should pass.
 for t in tests/test_*.py; do uv run python "$t"; done
 ```
 
-119 tests across six files. None needs an API key, a network or a test runner — they
+123 tests across six files. None needs an API key, a network or a test runner — they
 are plain scripts, so there is nothing to install. Most guard failures that only appear
 once a second quarter is merged: periods sorting by their string name, a metric changing
 grain between reports, a detector subtracting two figures from different years. One file
@@ -355,7 +374,7 @@ traceback.
 uv run python evals/run.py --n 3
 ```
 
-The deterministic half is proven by tests; the model's half can only be measured. 30
+The deterministic half is proven by tests; the model's half can only be measured. 33
 canned questions run against the live model, graded programmatically: every figure in
 an answer must appear in the tool traffic that produced it (or carry a web citation
 and say so), macro questions must refuse or answer from the web labelled as such,
@@ -375,25 +394,33 @@ All in `.env`:
 | `CRE_MODEL`      | `gemini-3.7-flash` | Swap models without touching code                      |
 | `CRE_THINKING`   | `medium`           | `low`, `medium` or `high`. Lower is faster and cheaper |
 
-Your portfolio lives in `config/watchlist.yaml`. Edit it, or delete every asset:
-the market-wide view works completely with an empty watchlist.
+Your portfolio lives in `config/watchlist.yaml`. The shipped one is real — the
+five London holdings of Nan Fung Group, held through Endurance Land, every
+field public-sourced and its rent roll deliberately absent. Edit it (add your
+own rents and lease dates to light up the reversion column), or delete every
+asset: the market-wide view works completely with an empty watchlist.
 
 ## Data and attribution
 
 Market figures come from **Savills, Central London Office Market Watch Q2 2026**,
 published 6 August 2026, reproduced here for a non-commercial proof of concept;
 from the **VOA 2026 non-domestic rating list** (open data, aggregated to
-building level for Canary Wharf — the method note travels inside
-`data/seed_voa_cw_2026list.json`); and from the **non-domestic EPC register**
-and named public building records for the Canary Wharf roster, cited row by
-row in `data/seed_cw_buildings_2026.json`. Attribution appears in the app
-beside every figure.
+building level for Canary Wharf and the City Core corridors — the method notes
+travel inside `data/seed_voa_cw_2026list.json` and
+`data/seed_voa_city_2026list.json`); and from the **non-domestic EPC register**
+and named public building records for both rosters, cited row by row in
+`data/seed_cw_buildings_2026.json` and `data/seed_city_buildings_2026.json`.
+Attribution appears in the app beside every figure.
 
-The four portfolio assets in `config/watchlist.yaml` are **fictional**, and labelled as
-such in the sidebar. They exist so the relevance matching has something to match against.
-Every market number is real; no holdings are — including Meridian Quay Tower's
-rateable value, the fictional half of the peer comparison whose other half is
-real VOA data.
+The portfolio in `config/watchlist.yaml` is **real**: the five London holdings
+of Nan Fung Group, extracted from the public portfolio of Endurance Land (its
+wholly-owned development platform since August 2024) and verified against
+nanfung.com and 2024–26 trade press — 138 Cheapside, 108 Cannon Street, The
+Bailey, 99 City Road and Regent Quarter. Every field carries a public source,
+named in each asset's note; the rent roll (passing rents, breaks, expiries) is
+not public and is deliberately absent rather than invented. Publicly reported
+lettings on the holdings — OpenAI's 88,500 sq ft at Regent Quarter among them —
+are cited events in `data/seed_endurance_events_2026.json`.
 
 Live web results come from Google Search grounding and are labelled separately from
 stored figures, because they carry different confidence.
@@ -404,7 +431,7 @@ into `data/seed_2026Q2.json`. There is no scraper to inspect. On 29 August 2026 
 70 source records — 47 facts, 6 sector rows, 17 named transactions — were re-read
 against the source; no discrepancies were found. Those 70 load as 53 Facts and 17
 events (the 6 sector rows normalise into ordinary Facts rather than a parallel
-model); the sidebar's larger count adds the Canary Wharf files below. One field is
+model); the sidebar's larger count adds the Canary Wharf and City files below. One field is
 an inference rather than a quote: Anthropic's letting at 1 Triton Square is tagged
 to the North of Oxford Street East submarket, which is correct but is not stated
 in the article.
@@ -428,6 +455,27 @@ roster sizes and ages come from the public records each row cites; the Colliers
 and Carter Jonas aggregates were verified against the publishers' own PDFs —
 which corrected two mis-attributions a search snippet had suggested, recorded in
 those files' `_method` notes. The fuller narrative, including what the harvest
-changed in the design, is `docs/designs/canary-wharf-peer-comps.md`.
+changed in the design, is recorded in the maintainers' design notes (kept
+outside the repository).
+
+**Provenance of the City building data and the portfolio** (harvested 29 August
+2026): the same VOA bulk download, re-fetched and sliced to the Cheapside/
+Gresham/Wood Street, Old Bailey/Ludgate/Fleet Place and Cannon Street
+corridors, aggregated by the same area-weighted rule into the 32 building
+figures of `data/seed_voa_city_2026list.json` — three of which are the
+holdings themselves, so both sides of the peer card come from one list. Two
+matching traps are recorded in that file's `_method`: Cheapside House's floors
+are named three different ways (naive matching finds 2 of its 12
+hereditaments), and 99 City Road has no assessment at all while stripped for
+redevelopment — an absence kept as data. The portfolio itself was extracted
+from `enduranceland.com/portfolio` (crawled the same day, filtered to
+investment partner = Nan Fung Group), cross-checked against nanfung.com's
+property pages — which also settled 108 Cannon Street's true size at 38,800
+sq ft, within 1.2% of the VOA aggregate — and against trade press for 2024–26
+status: all five holdings verified held, with one unresolved signal (a
+paywalled September 2025 Green Street headline about a marketed "£140m Holborn
+trophy") deliberately recorded as a caveat, not an event, because the building
+it concerns cannot be identified. The fuller design narrative lives in the
+maintainers' design notes (kept outside the repository).
 
 In production this dataset would come from a licensed feed rather than a published report.

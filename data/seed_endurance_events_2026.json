@@ -1,0 +1,33 @@
+{
+  "source": {
+    "publisher": "Trade press / developer records",
+    "title": "Endurance Land / Nan Fung holding events (per-event citations in notes)",
+    "published": "2026-08-29",
+    "url": "https://www.enduranceland.com/news/"
+  },
+  "_method": "Building-level events for the five Nan Fung Group London holdings, harvested and cross-checked 2026-08-29. Building names match data/seed_city_buildings_2026.json exactly where the building is on the City Core roster, because the comps join is an exact name match. Each note names its own citations. Ownership verified per holding: Nan Fung announced on 2024-08-01 it would acquire all remaining interests in Endurance Land LLP (Endurance Land 2024-08-01; CoStar 2024-08), so 'investment partner' on the portfolio page is stale -- the five assets are Nan Fung holdings with Endurance Land as its wholly-owned development platform. One signal deliberately NOT filed as an event: Green Street News, 2025-09-12, 'Nan Fung to offload GBP 140m Holborn trophy' -- paywalled, building unidentified; none of the five listed holdings is squarely in Holborn, so recording any of them as marketed on that headline would be an unjustified attribution. Known gaps, kept as gaps: rents for every post-2019 letting are undisclosed; the 2023 pre-let tenants at 108 Cannon Street are unnamed in the source; The Bailey's ground floor occupancy after Knotel is unconfirmed (CBRE lists space to rent at the building, accessed 2026-08-29).",
+  "events": [
+    {"type": "letting", "date": "2026Q2", "occupier": "OpenAI",
+     "building": "Jahn Court & Brassworks, Regent Quarter", "sqft": 88500,
+     "submarket": "King's Cross",
+     "note": "OpenAI signed a long-term lease on 88,500 sq ft across Jahn Court and the Brassworks Building at Regent Quarter -- its first permanent London office, up to 544 staff, opening expected 2027. Rent undisclosed. The buildings were delivered by Multiplex after ISG (appointed December 2023 to the ~GBP 70m offices-to-labs phase 1) entered administration in September 2024. Sources: Endurance Land 2026-04; Estates Gazette 2026-04; UKTN 2026-04-13; Construction News 2026-08-11 (delivery); Construction Enquirer 2023-12-12 and 2024-10-09 (ISG/Multiplex)."},
+    {"type": "refurbishment", "date": "2026Q3", "occupier": null,
+     "building": "99 City Road", "sqft": 475000, "submarket": "City Fringe",
+     "note": "Multiplex confirmed as main contractor on the ~GBP 300m retain-first retrofit of the former Inmarsat tower into a 36-storey, 475,000 sq ft office; main works starting Q3 2026, practical completion targeted 2030. KPF design; Islington resolved to grant permission September 2023 (planning coverage said 35 storeys, later coverage 36). Knight Frank leasing; no pre-let reported. Sources: Construction Enquirer 2026-08-10; Construction News 2026-08-11; BE News 2026-08-10; KPF 2023-09."},
+    {"type": "letting", "date": "2025Q1", "occupier": "Hollis",
+     "building": "138 Cheapside", "sqft": 10000, "submarket": "City Core",
+     "note": "Hollis agreed a lease on ~10,000 sq ft of newly refurbished Cat A+ space, consolidating its two London offices into a single City HQ. Rent undisclosed. Source: Endurance Land 2025-03-27."},
+    {"type": "letting", "date": "2024Q2", "occupier": null,
+     "building": "108 Cannon Street", "sqft": 3358, "submarket": "City Core",
+     "note": "The building reached fully-let with a final deal on 3,358 sq ft of lower-ground space in early April 2024, after 2nd and 3rd floor pre-lets ahead of the Cat B works completing end-2023 (tenants unnamed in the source). Agents JLL and RUBIX. Source: Endurance Land 2024-04-30."},
+    {"type": "letting", "date": "2022Q1", "occupier": "Willmott Dixon Interiors",
+     "building": "The Bailey", "submarket": "City Core",
+     "note": "First floor let to Willmott Dixon Interiors on a 10-year green lease for its London head office, occupation Q4 2022 -- re-letting part of the space Knotel had committed to before its January 2021 Chapter 11 (Newmark assumed ownership). Sources: Endurance Land 2022-03-25; Willmott Dixon Interiors 2022; Bloomberg 2021-02-01 (Knotel)."},
+    {"type": "letting", "date": "2020Q1", "occupier": "IPG Mediabrands",
+     "building": "The Bailey", "sqft": 93000, "submarket": "City Core",
+     "note": "Agreements to lease the whole building exchanged February 2020: IPG Mediabrands took 93,000 sq ft (lower ground, 2nd-8th) and Knotel 21,000 sq ft (ground, 1st). IPG remained in occupation through 2025. Rent undisclosed. Sources: CoStar 2020-03; Mishcon de Reya 2020; IPG Mediabrands via LinkedIn 2025-11 (continued occupation)."},
+    {"type": "letting", "date": "2019Q4", "occupier": "HLK",
+     "building": "138 Cheapside", "rent_psf": 76.50, "submarket": "City Core",
+     "note": "Seventh floor (with terrace) let to HLK at GBP 76.50 psf following the September 2019 repositioning -- the one public rent on any holding, quoted for provenance; a 2019 rent is not a 2026 benchmark. Source: Endurance Land portfolio page, accessed 2026-08-29."}
+  ]
+}

@@ -60,6 +60,14 @@ submarkets:
     label: Midtown
     parent: central_london
     aliases: ["Holborn", "Covent Garden", "WC1", "WC2"]
+  # Regent Quarter (the King's Cross holding) needs somewhere defensible to
+  # stand. Some agents file King's Cross under the West End; none of our loaded
+  # sources publishes it under anything, so the node hangs off Central London
+  # -- the parent we can defend -- and market facts climb there.
+  kings_cross:
+    label: King's Cross
+    parent: central_london
+    aliases: ["Kings Cross", "N1C", "King's Cross Central"]
   paddington:
     label: Paddington
     parent: west_end

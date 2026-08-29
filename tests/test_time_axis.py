@@ -240,18 +240,22 @@ def test_shipped_seed_is_unchanged():
     day it was written and load() silently dropped them. See
     test_sector_rows_are_reachable. 53 -> 70 is the Canary Wharf harvest: 15
     building-level rateable_value_avg facts (VOA), one vacancy_rate (Colliers)
-    and one prime_rent (Carter Jonas).
+    and one prime_rent (Carter Jonas). 70 -> 102 is the City harvest: 32
+    building-level rateable_value_avg facts across the Cheapside, Old Bailey
+    and Cannon Street corridors, holdings included.
     """
     store = Store.load()
-    assert len(store.facts) == 70
+    assert len(store.facts) == 102
     a = store.get("grade_a_rent_avg", "City")
     assert a.value == 76.21 and a.delta("yoy").render() == "+7.0%"
     sigs = detect_all(store, Watchlist.load())
     # 4 -> 5 is deliberate: sector_demand joins the sector take-up breakdown to
     # the under-offer total, a comparison the source never states. See
-    # test_sector_demand.py. 5 -> 6 is peer_gap, the building-vs-building
-    # card. See test_peer_comps.py.
-    assert len(sigs) == 6
+    # test_sector_demand.py. 5 market signals, plus one peer_gap card per City
+    # Core holding the roster can justify a peer set for (test_peer_comps pins
+    # which). The market five are watchlist-independent.
+    assert len([s for s in sigs if not s.id.startswith("peer_gap")]) == 5
+    assert len(sigs) == 7
     assert "in 2026" in [s for s in sigs if s.id.startswith("supply")][0].detail
 
 

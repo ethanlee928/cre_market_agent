@@ -310,8 +310,7 @@ class Building:
     achieved rent, a vacancy event) is a Fact or event carrying `building`,
     so it arrives with its own Source and period like every other number.
     Per-row provenance for these constants travels in `note`; the file-level
-    Source covers the harvest. That is the pilot's compromise, recorded in
-    docs/designs/canary-wharf-peer-comps.md.
+    Source covers the harvest.
     """
     name: str
     submarket: str
