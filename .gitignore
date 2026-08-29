@@ -4,5 +4,6 @@ __pycache__/
 *.pyc
 .cache/
 out/
+evals/runs/
 *.egg-info/
 .claude/

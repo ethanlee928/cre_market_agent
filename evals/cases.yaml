@@ -1,0 +1,233 @@
+# Live eval cases for the agent loop. Read with yaml.safe_load, run by
+# evals/run.py against the real model.
+#
+# Per case: id, question, and an expect block. Optional: follow_up (a second
+# turn continuing the first turn's history — this is what exercises the
+# history round-trip live), watchlist: empty (runs against a bare watchlist,
+# holding the market-wide base case in chat).
+#
+# expect keys:
+#   must_call        list of matchers; tool takes |-separated alternatives,
+#                    args_include pins argument values, args_absent forbids them
+#   figures_sourced  every figure in the answer must appear in the tool traffic
+#   refusal_or_web   same arithmetic, different intent: a clean refusal, or
+#                    web-labelled figures carrying citations
+#   action_verb      the answer closes on a verb from signals.ACTIONS
+#   forbid           regexes that must not appear (case-insensitive)
+#   answer_matches   regexes that must appear
+
+cases:
+  # -- store lookups --------------------------------------------------------
+
+  - id: city_vacancy
+    question: "What's the vacancy rate in the City?"
+    expect:
+      must_call: [{tool: get_metric, args_include: {metric: vacancy_rate}}]
+      figures_sourced: true
+
+  - id: west_end_prime_rent
+    question: "What are prime rents doing in the West End?"
+    expect:
+      must_call: [{tool: get_metric}]
+      figures_sourced: true
+
+  - id: tech_take_up
+    question: "How much space has Tech & Media taken up?"
+    expect:
+      must_call: [{tool: get_metric}]
+      figures_sourced: true
+
+  - id: under_offer_total
+    question: "How much space is under offer in Central London?"
+    expect:
+      must_call: [{tool: get_metric, args_include: {metric: under_offer}}]
+      figures_sourced: true
+
+  # -- hierarchy: the climb must label the broader geography ----------------
+
+  - id: paddington_climbs_to_west_end
+    question: "What's vacancy like in Paddington?"
+    expect:
+      must_call: [{tool: get_metric}]
+      answer_matches: ['West End']
+      figures_sourced: true
+
+  - id: mayfair_grade_a
+    question: "What are Grade A rents in Mayfair?"
+    expect:
+      answer_matches: ['West End']
+      figures_sourced: true
+
+  - id: clerkenwell_alias
+    question: "How's the market around Clerkenwell?"
+    expect:
+      must_call: [{tool: get_metric}]
+      figures_sourced: true
+
+  - id: canary_wharf_climbs
+    question: "What's take-up in Canary Wharf?"
+    expect:
+      answer_matches: ['Central London']
+      figures_sourced: true
+
+  # -- gaps and typos need different answers, and no invented figures -------
+
+  - id: basingstoke_is_not_london
+    question: "What's the vacancy rate in Basingstoke?"
+    expect:
+      refusal_or_web: true
+
+  - id: unknown_sector
+    question: "What's take-up for the Legal sector this year?"
+    expect:
+      figures_sourced: true
+
+  - id: grade_b_level_unpublished
+    # E-4 live: Savills publishes the West End Grade B change and withholds
+    # the level. A stated level here is a fabrication and fails provenance.
+    question: "What's the average Grade B rent level in the West End?"
+    expect:
+      must_call: [{tool: get_metric}]
+      figures_sourced: true
+
+  - id: watchlist_epc
+    question: "What's the EPC rating of 120 Fenchurch Street?"
+    expect:
+      must_call: [{tool: get_watchlist|get_signals}]
+      figures_sourced: true
+
+  # -- events ---------------------------------------------------------------
+
+  - id: whos_taking_space
+    question: "Who's taking space right now?"
+    expect:
+      must_call: [{tool: find_market_activity}]
+      figures_sourced: true
+
+  - id: biggest_letting_is_anthropic
+    question: "What was the biggest letting this quarter?"
+    expect:
+      must_call: [{tool: find_market_activity}]
+      answer_matches: ['Anthropic']
+      figures_sourced: true
+
+  - id: west_end_deals
+    question: "What deals happened in the West End?"
+    expect:
+      must_call: [{tool: find_market_activity}]
+      figures_sourced: true
+
+  - id: investment_activity
+    question: "Any notable investment transactions this quarter?"
+    expect:
+      must_call: [{tool: find_market_activity}]
+      figures_sourced: true
+
+  # -- portfolio decisions: the closed vocabulary, never "monitor" ----------
+
+  - id: mayfair_house_decision
+    question: "What should I do about Mayfair House?"
+    expect:
+      must_call: [{tool: get_signals|get_watchlist}]
+      action_verb: true
+      forbid: ['\bmonitor', 'keep an eye', 'watch(ing)? this space']
+      figures_sourced: true
+
+  - id: clerkenwell_works_exposure
+    question: "Is Clerkenwell Works exposed to anything right now?"
+    expect:
+      must_call: [{tool: get_signals|get_watchlist}]
+      forbid: ['\bmonitor', 'keep an eye']
+      figures_sourced: true
+
+  - id: fenchurch_decision
+    question: "Should we re-let or sell 120 Fenchurch Street when the lease ends?"
+    expect:
+      action_verb: true
+      forbid: ['\bmonitor', 'keep an eye']
+      figures_sourced: true
+
+  - id: portfolio_one_minute_read
+    question: "Give me the one-minute read on our portfolio."
+    expect:
+      must_call: [{tool: get_signals|get_watchlist}]
+      forbid: ['\bmonitor', 'keep an eye']
+      figures_sourced: true
+
+  # -- macro: not in the store; refuse, or answer from the web and say so ---
+
+  - id: bank_rate
+    question: "Where's the Bank Rate right now?"
+    expect:
+      refusal_or_web: true
+
+  - id: gilt_yields
+    question: "What are 10-year gilt yields doing?"
+    expect:
+      refusal_or_web: true
+
+  - id: rates_and_positioning
+    question: "How do interest rates affect our positioning?"
+    expect:
+      refusal_or_web: true
+      forbid: ['\bmonitor', 'keep an eye']
+
+  # -- ambiguity discipline -------------------------------------------------
+
+  - id: active_demand_is_the_total
+    # E-3 live: active_demand/Central London exists four times, three with a
+    # sector. Asking plainly must fetch the total, not a slice the user never
+    # asked for.
+    question: "What's active demand in Central London?"
+    expect:
+      must_call: [{tool: get_metric,
+                   args_include: {metric: active_demand},
+                   args_absent: [sector]}]
+      figures_sourced: true
+
+  - id: quarter_specific
+    question: "What was Central London take-up in Q2 2026 specifically?"
+    expect:
+      must_call: [{tool: get_metric, args_include: {metric: take_up}}]
+      figures_sourced: true
+
+  - id: quality_gap_both_markets
+    question: "How does the Grade A/Grade B gap compare between the City and the West End?"
+    expect:
+      figures_sourced: true
+
+  # -- empty watchlist: the market-wide base case must hold in chat ---------
+
+  - id: empty_watchlist_market_view
+    watchlist: empty
+    question: "What moved this quarter?"
+    expect:
+      must_call: [{tool: get_signals}]
+      forbid: ['\bmonitor', 'keep an eye']
+      figures_sourced: true
+
+  - id: empty_watchlist_unknown_asset
+    watchlist: empty
+    question: "What should I do about Mayfair House?"
+    expect:
+      must_call: [{tool: get_watchlist|get_signals}]
+      figures_sourced: true
+
+  # -- multi-turn: the history round-trip, live -----------------------------
+
+  - id: followup_why_it_matters
+    question: "What's the vacancy rate in the City?"
+    follow_up: "Why does that matter for us?"
+    expect:
+      forbid: ['\bmonitor', 'keep an eye']
+      figures_sourced: true
+
+  - id: followup_prelet_share
+    # The follow-up is unanswerable without the first turn's context: "that"
+    # is the completions figure. This is the case that catches the history
+    # bug the review found, against the live API.
+    question: "How much space is completing in 2026?"
+    follow_up: "And how much of that is pre-let?"
+    expect:
+      must_call: [{tool: get_metric}]
+      figures_sourced: true

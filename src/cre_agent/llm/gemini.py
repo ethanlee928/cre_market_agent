@@ -293,6 +293,15 @@ class Agent:
 
             if not calls:
                 text = resp.text or ""
+                # The model's own words must enter history: the tool trace
+                # alone is not the answer, and a follow-up ("why?") otherwise
+                # reaches a model that never saw what it said. cand.content
+                # goes back verbatim, thought signatures and all.
+                if cand is not None and cand.content is not None:
+                    contents.append(cand.content)
+                elif text:
+                    contents.append(types.Content(
+                        role="model", parts=[types.Part(text=text)]))
                 yield Event("text", payload=text)
                 yield Event("done", payload={"text": text,
                                              "citations": _citations(cand),
