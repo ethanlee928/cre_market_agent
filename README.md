@@ -91,12 +91,9 @@ bought, and what it cost.
   `uv run streamlit run app.py`. A transport boundary would have added deployment
   surface and proved nothing about the loop.
 - **No database server.** Everything loads from `data/seed_*.json` at startup, one
-  file per source, 102 Facts and 27 events across nine sources. Read-only, in
-  memory.
+  file per source, 102 Facts and 27 events across nine sources.
 - **No observability stack.** No Langfuse, no tracing backend. Every tool call is
-  expanded in the UI directly above the answer it produced, which at this scale
-  serves the same purpose: you can see which figures were looked up, and which the
-  agent declined to invent.
+  expanded in the UI directly above the answer it produced.
 - **One primary market provider, plus open data.** Savills, Central London
   Office Market Watch Q2 2026, is the market spine; the VOA rating list, the
   EPC register, and Colliers/Carter Jonas/trade-press figures join it one seed
@@ -110,16 +107,12 @@ bought, and what it cost.
 - **A fixed strategy vocabulary.** Six decision verbs, declared in
   `src/cre_agent/signals.py`: `regear`, `refurbish`, `re-price`, `hold`,
   `defer capex`, `start the conversation`. They are assumed, not derived; a real
-  portfolio team would own that list. What matters is that it is closed and built
-  in Python, so a test can assert that "monitor" never appears. That is the verb
-  that lets a paragraph end without deciding anything, and held in the prompt
-  instead the ban could only be asked for.
+  portfolio team would own that list.
 
 **Not built, stated plainly rather than discovered**
 
 - No automated data ingestion. The quarterly dataset was harvested once, by hand,
-  by reading the published article and transcribing the figures. All 70 records
-  were later re-checked against the source; see **Data and attribution**.
+  by reading the published article and transcribing the figures.
 - One quarter of history, so trends are quoted from the source rather than computed.
   Q1 2026 is the obvious next harvest and would make quarter-on-quarter computed.
 - Only the Streamlit layer is exercised by hand; everything under it is covered
@@ -213,9 +206,8 @@ rather than invented.
 **Provenance, stated plainly.** All of it was harvested by hand on 29 August
 2026; there is no scraper to inspect.
 
-- **Savills.** savills.co.uk returns HTTP 403 to ordinary HTTP clients, so the
-  article was read in a browser and transcribed into `data/seed_2026Q2.json`. All
-  70 source records were re-read against the source that day; no discrepancies
+- **Savills.** The article was read in a browser and transcribed into `data/seed_2026Q2.json`.
+  All 70 source records were re-read against the source that day; no discrepancies
   were found. One field is an inference rather than a quote: Anthropic's letting
   at 1 Triton Square is tagged to North of Oxford Street East, which is correct
   but is not stated in the article.
