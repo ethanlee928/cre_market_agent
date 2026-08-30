@@ -54,8 +54,8 @@ The image builds on the pinned
 [`uv` base image](https://github.com/astral-sh/uv-docker-example), installs from
 `uv.lock` so the container resolves the wheels your laptop resolved, and runs as a
 non-root user. Your key is passed in at run time from `.env` and never enters an
-image layer — and with no `.env` at all the container still serves the full brief,
-with chat switched off.
+image layer. With no `.env` at all the container still serves the full brief, with
+chat switched off.
 
 ### Configuration
 
@@ -87,13 +87,13 @@ bought, and what it cost.
   screen can be traced; retrieval over prose would have made that promise
   unkeepable.
 - **No API tier, no MCP server, no SPA.** Streamlit is the entire presentation
-  layer and the agent runs in the same process — one entry point,
+  layer and the agent runs in the same process, so there is one entry point:
   `uv run streamlit run app.py`. A transport boundary would have added deployment
   surface and proved nothing about the loop.
-- **No database server.** Everything loads from `data/seed_*.json` at startup —
-  one file per source, 102 Facts and 27 events across nine sources. Read-only,
-  in memory.
-- **No observability stack** — no Langfuse, no tracing backend. Every tool call is
+- **No database server.** Everything loads from `data/seed_*.json` at startup, one
+  file per source, 102 Facts and 27 events across nine sources. Read-only, in
+  memory.
+- **No observability stack.** No Langfuse, no tracing backend. Every tool call is
   expanded in the UI directly above the answer it produced, which at this scale
   serves the same purpose: you can see which figures were looked up, and which the
   agent declined to invent.
@@ -101,19 +101,19 @@ bought, and what it cost.
   Office Market Watch Q2 2026, is the market spine; the VOA rating list, the
   EPC register, and Colliers/Carter Jonas/trade-press figures join it one seed
   file per source. Merging providers is a mapping problem rather than a loading
-  problem — definitions and submarket boundaries differ — which is what
+  problem, because definitions and submarket boundaries differ. That is what
   `src/cre_agent/submarkets.py` is for: a controlled vocabulary with an explicit
   hierarchy, so an alias resolves upward to the node that actually holds facts.
   The same reasoning is why the sector vocabulary was dropped rather than guessed.
   Savills uses different cuts in different tables and never claims they are
   equivalent, and `Insurance & Financial` is not `Financial & Banking`.
-- **A fixed strategy vocabulary.** Six decision verbs — `regear`, `refurbish`,
-  `re-price`, `hold`, `defer capex`, `start the conversation` — declared in
-  `src/cre_agent/signals.py`. They are assumed, not derived; a real portfolio team
-  would own that list. What matters is that it is closed and built in Python, so
-  a test can assert that "monitor" — the verb that lets a paragraph end without
-  deciding anything — never appears. Held in the prompt instead, that could only
-  be asked for.
+- **A fixed strategy vocabulary.** Six decision verbs, declared in
+  `src/cre_agent/signals.py`: `regear`, `refurbish`, `re-price`, `hold`,
+  `defer capex`, `start the conversation`. They are assumed, not derived; a real
+  portfolio team would own that list. What matters is that it is closed and built
+  in Python, so a test can assert that "monitor" never appears. That is the verb
+  that lets a paragraph end without deciding anything, and held in the prompt
+  instead the ban could only be asked for.
 
 **Not built, stated plainly rather than discovered**
 
@@ -130,16 +130,17 @@ bought, and what it cost.
 
 ![The ranked brief, then a peer comparison computed against 14 named buildings](assets/demo.gif)
 
-The brief opens ranked and filtered to the buildings you hold — here 3 of 7 signals
+The brief opens ranked and filtered to the buildings you hold. Here 3 of 7 signals
 touch the portfolio, led by The Bailey valued 18% above its 14-peer street.
 
 Clicking **Is The Bailey priced right against its peers?** runs the whole loop in the
-open. The tool panel logs every lookup it makes — `get_watchlist`, `compare_building`,
-`get_signals` — and the answer is arithmetic rather than recall: £616.77/m² against a
+open. The tool panel logs every lookup it makes (`get_watchlist`, `compare_building`,
+`get_signals`), and the answer is arithmetic rather than recall: £616.77/m² against a
 £524.61/m² median across 14 named City Core buildings, a 17.6% gap worth £984,624 a
 year of implied value above the street, carrying its source and as-of date. It is also
-explicit about what it will not do — *0 reported peer lettings on file* — rather than
-benchmark a valuation against a headline rent, and it closes on a verb from `ACTIONS`.
+explicit about what it will not do, reporting _0 reported peer lettings on file_
+rather than benchmarking a valuation against a headline rent, and it closes on a verb
+from `ACTIONS`.
 
 ## Tests and evals
 
@@ -147,33 +148,13 @@ benchmark a valuation against a headline rent, and it closes on a verb from `ACT
 for t in tests/test_*.py; do uv run python "$t"; done
 ```
 
-143 tests across six files. None needs an API key, a network or a test runner — they
-are plain scripts, so there is nothing to install. Most guard failures that only appear
-once a second quarter is merged: periods sorting by their string name, a metric changing
-grain between reports, a detector subtracting two figures from different years, and two
-sources publishing the same figure, where the newer `published` date wins rather than
-whichever filename sorted first. One file guards the join: that a lease window opening in
-July 2026 rejects a March 2026 break, that a `Fact` carrying a `None` level never has a
-comparison built against it, and that a mistyped key in `config/watchlist.yaml` names
-itself instead of raising a bare `TypeError` at import.
-`test_agent_loop.py` drives `ask()` against a fake client returning real
-`google.genai.types` objects: the final answer enters conversation history, tool rounds
-round-trip in order, and a missing key degrades to a friendly error instead of a
-traceback.
+143 tests across six files. None of them needs an API key.
 
 ```bash
 uv run python evals/run.py --n 3
 ```
 
-The deterministic half is proven by tests; the model's half can only be measured. 33
-canned questions run against the live model, graded programmatically: every figure in
-an answer must appear in the tool traffic that produced it (or carry a web citation
-and say so), macro questions must refuse or answer from the web labelled as such,
-decision questions must close on the fixed verb vocabulary and never on "monitor",
-and the two multi-turn cases hold the conversation-history round-trip against the
-real API. Needs `GOOGLE_API_KEY`. A case fails the run only when it fails a majority
-of its reps, so one flaky rep does not cry regression and a real one cannot hide.
-Full transcripts land in `evals/runs/` for diffing after any prompt or model change.
+33 canned questions run against the live model, graded programmatically. Needs `GOOGLE_API_KEY`.
 
 ## Data and attribution
 
@@ -182,9 +163,9 @@ source, nine in `data/`:
 
 | Source                                                                            | Provides                                                                                        | Loads as            |
 | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------- |
-| **Savills**, Central London Office Market Watch Q2 2026 (published 6 August 2026) | the market spine — rents, vacancy, take-up, pipeline, sector cuts, named lettings               | 53 facts, 17 events |
+| **Savills**, Central London Office Market Watch Q2 2026 (published 6 August 2026) | the market spine: rents, vacancy, take-up, pipeline, sector cuts, named lettings                | 53 facts, 17 events |
 | **VOA 2026 non-domestic rating list** (open, 2024 antecedent valuation date)      | building valuations in £/m², Canary Wharf and the City Core corridors                           | 47 facts            |
-| **Non-domestic EPC register** and named public building records                   | the two peer rosters — floor area, completion year, whole-building EPC                          | 50 buildings        |
+| **Non-domestic EPC register** and named public building records                   | the two peer rosters: floor area, completion year, whole-building EPC                           | 50 buildings        |
 | **Colliers** (January 2026) and **Carter Jonas** (Q1 2026)                        | Canary Wharf vacancy and prime rent, each at its own older as-of date                           | 2 facts             |
 | **Trade press**, cited event by event                                             | events on the Canary Wharf estate and on the holdings (OpenAI's 88,500 sq ft at Regent Quarter) | 10 events           |
 | **Endurance Land / Nan Fung** public portfolio                                    | the watchlist itself                                                                            | 5 holdings          |
@@ -194,11 +175,11 @@ production this dataset would come from a licensed feed. Live web results come
 from Google Search grounding and are labelled separately from stored figures,
 because they carry different confidence.
 
-The portfolio in `config/watchlist.yaml` is **real** — 138 Cheapside, 108 Cannon
+The portfolio in `config/watchlist.yaml` is **real**: 138 Cheapside, 108 Cannon
 Street, The Bailey, 99 City Road and Regent Quarter, the five London holdings of
 Nan Fung Group through its wholly-owned development platform Endurance Land.
-Every field carries a public source, named in the asset's note. The rent roll —
-passing rents, breaks, expiries — is not public, and is deliberately absent
+Every field carries a public source, named in the asset's note. The rent roll
+(passing rents, breaks, expiries) is not public, and is deliberately absent
 rather than invented.
 
 **Provenance, stated plainly.** All of it was harvested by hand on 29 August
@@ -214,13 +195,13 @@ rather than invented.
   England and Wales), sliced to E14 and to the Cheapside/Gresham/Wood Street, Old
   Bailey/Ludgate/Fleet Place and Cannon Street corridors, restricted to office
   descriptions, matched to buildings by street name and number, then aggregated
-  as aggregate rateable value over aggregate floor area — area-weighted, because
-  serviced-office operators fragment buildings into micro-suites that would
-  dominate an unweighted median. Three of the holdings sit in that same list, so
-  both sides of the peer comparison come from one dataset. What did not match is kept
-  as an absence rather than a guess: three Canary Wharf towers, an
-  un-attributable Ludgate Hill block, and 99 City Road, which holds no assessment
-  at all while stripped for redevelopment. Each file's `_method` key records the
+  as aggregate rateable value over aggregate floor area. Weighting by area
+  matters because serviced-office operators fragment buildings into micro-suites
+  that would dominate an unweighted median. Three of the holdings sit in that
+  same list, so both sides of the peer comparison come from one dataset. What did
+  not match is kept as an absence rather than a guess: three Canary Wharf towers,
+  an un-attributable Ludgate Hill block, and 99 City Road, which holds no
+  assessment at all while stripped for redevelopment. Each file's `_method` key records the
   rule and its matching traps; the raw download was deleted, and the harvest is
   repeatable from the URL in the source block.
 - **Rosters and portfolio.** EPC ratings were read building by building from the
@@ -229,7 +210,7 @@ rather than invented.
   Carter Jonas figures were checked against the publishers' own PDFs, which
   corrected two mis-attributions a search snippet had suggested. The portfolio was
   crawled from `enduranceland.com/portfolio` and cross-checked against nanfung.com
-  and 2024–26 trade press: all five holdings verified held, with one unresolved
-  signal — a paywalled September 2025 Green Street headline about a marketed
-  "£140m Holborn trophy" — recorded as a caveat rather than an event, because the
-  building it concerns cannot be identified.
+  and 2024–26 trade press: all five holdings verified held. One signal is
+  unresolved, a paywalled September 2025 Green Street headline about a marketed
+  "£140m Holborn trophy", and it is recorded as a caveat rather than an event
+  because the building it concerns cannot be identified.
