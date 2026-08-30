@@ -142,6 +142,34 @@ explicit about what it will not do, reporting _0 reported peer lettings on file_
 rather than benchmarking a valuation against a headline rent, and it closes on a verb
 from `ACTIONS`.
 
+## Agentic Tools
+
+Six functions, declared in `src/cre_agent/llm/gemini.py`, plus Google Search in the
+same request. Every figure in an answer came back from one of these; the model has
+no other route to a number. **Key area** names the coverage area each tool serves,
+taken from the nine declared in `src/cre_agent/coverage.py`. The three tools that
+reach none of them are loop mechanics rather than subject coverage: `list_available`
+orients before a lookup, `get_watchlist` supplies the submarket and grade a lookup is
+then filtered by, and `get_signals` returns what the detectors already computed.
+
+| Tool                   | Key area                                                        | Returns                                                                                       |
+| ---------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `get_metric`           | rents, vacancy, take-up, pipeline, submarkets, occupier drivers | one metric for one submarket: value, unit, YoY and QoQ where published, source and as-of date |
+| `list_available`       | N/A                                                             | every metric, submarket, sector and event type the store holds                                |
+| `find_market_activity` | take-up, named events                                           | named transactions: who took space, what completed, what broke ground, what sold              |
+| `get_signals`          | N/A                                                             | the ranked signals, with severity, evidence and the assets each affects                       |
+| `compare_building`     | submarket dynamics                                              | one holding against named peers: per-peer valuations, letting rents, medians, decision verb   |
+| `get_watchlist`        | submarket dynamics                                              | the user's own assets, and which fields they have supplied                                    |
+| Google Search          | macro, named events                                             | anything after the report date, returned with a web citation and labelled separately          |
+
+The refusals are part of the surface, not error handling: `compare_building` outside
+the two rosters, a sector name the source does not carry, a level that was never
+published. Each returns a stated absence, which is what the agent then says. Macro is
+the one area with no function behind it: rates, gilts and Bank Rate are not in a
+quarterly agency report. The model is barred from answering those from memory, so it
+either refuses or answers from Search with the citation attached, which is what the
+`refusal_or_web` eval cases check.
+
 ## Tests and evals
 
 ```bash
